@@ -80,3 +80,9 @@ button:focus-visible {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .rounded-large {
+    border-radius: 14px;
+  }
+}

@@ -42,7 +42,7 @@
       v-else
       class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
       @dragover.prevent
-      @drop="handleDrop"
+      @drop="handleDrop2"
     >
       <p class="text-gray-600">将PDF文件拖拽到这里</p>
     </div>
@@ -53,7 +53,9 @@
 <script setup>
 import { PDFDocument } from "pdf-lib";
 import { ref } from "vue"; // 导入 ref
+import { syncCallPdfToImg } from "./Left/U";
 import LoadingView from "./LoadingView.vue";
+
 let selectedFiles = ref([]);
 const pdfSrc = ref(null);
 const isLoading = ref(false);
@@ -70,6 +72,17 @@ const handleDrop = (event) => {
   isLoading.value = true;
   mergePDFs();
   isLoading.value = false;
+};
+
+const handleDrop2 = async (event) => {
+  event.preventDefault();
+  const files = event.dataTransfer.files;
+  // selectedFiles.value.push(...files);
+
+  let imgs = await syncCallPdfToImg(files);
+  console.log("========0==");
+  console.log(imgs.length);
+  console.log("========1==");
 };
 
 const handleFileChange = (event) => {

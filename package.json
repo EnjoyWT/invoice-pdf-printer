@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "opencv-qr": "^0.5.0",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^3.5.141",
     "tesseract.js": "^5.0.5",
     "vue": "^3.4.19",
     "vue-draggable-resizable": "^3.0.0",
