@@ -55,7 +55,7 @@ import { PDFDocument } from "pdf-lib";
 import { ref } from "vue"; // 导入 ref
 import { syncCallPdfToImg } from "./Left/U";
 import LoadingView from "./LoadingView.vue";
-
+import { OpencvQrUtil } from "./QR/OpencvQrUtil.js";
 let selectedFiles = ref([]);
 const pdfSrc = ref(null);
 const isLoading = ref(false);
@@ -80,9 +80,13 @@ const handleDrop2 = async (event) => {
   // selectedFiles.value.push(...files);
 
   let imgs = await syncCallPdfToImg(files);
-  console.log("========0==");
-  console.log(imgs.length);
-  console.log("========1==");
+  try {
+    const result = await OpencvQrUtil.detectQrCode(imgs[0]);
+    // 处理QR码检测结果
+    console.log("QR code detection result:", result);
+  } catch (error) {
+    console.error("Error detecting QR code:", error);
+  }
 };
 
 const handleFileChange = (event) => {
