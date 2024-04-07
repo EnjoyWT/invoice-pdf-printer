@@ -55,7 +55,6 @@ import { PDFDocument } from "pdf-lib";
 import { ref } from "vue"; // 导入 ref
 import { syncCallPdfToImg } from "./Left/U";
 import LoadingView from "./LoadingView.vue";
-import { OpencvQrUtil } from "./QR/OpencvQrUtil.js";
 let selectedFiles = ref([]);
 const pdfSrc = ref(null);
 const isLoading = ref(false);

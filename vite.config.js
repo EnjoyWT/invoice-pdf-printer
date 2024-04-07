@@ -14,4 +14,9 @@ export default defineConfig({
       "@components": resolve("src/components"),
     },
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "esnext",
+    },
+  },
 });
