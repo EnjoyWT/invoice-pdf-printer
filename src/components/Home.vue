@@ -1,7 +1,7 @@
 <template>
-  <div class="flex flex-col items-center justify-top h-screen w-screen">
+  <div class="flex flex-col items-center justify-top h-full w-full">
     <div class="mb-8">
-      <div class="flex flex-row items-center w-full space-x-4">
+      <div class="flex flex-row items-center space-x-4">
         <label
           for="fileInput"
           class="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600"
@@ -32,17 +32,12 @@
       <p class="text-gray-600">将PDF文件拖拽到这里</p>
     </div> -->
 
-    <iframe
-      v-if="pdfSrc"
-      class="w-8/12 h-full"
-      :src="pdfSrc"
-      frameborder="0"
-    ></iframe>
+    <iframe v-if="pdfSrc" class="w-8/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
     <div
       v-else
       class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
       @dragover.prevent
-      @drop="handleDrop2"
+      @drop="handleDrop"
     >
       <p class="text-gray-600">将PDF文件拖拽到这里</p>
     </div>
@@ -95,6 +90,8 @@ const handleFileChange = (event) => {
   isLoading.value = true;
   mergePDFs();
   isLoading.value = false;
+
+  event.target.value = null;
 };
 
 const mergePDFs = async () => {
@@ -141,7 +138,6 @@ const mergePDFs = async () => {
           fy = 20;
         }
         var x = (page.getWidth() - americanFlagDims.width) / 2;
-        console.log(x);
         page.drawPage(preamble, {
           ...americanFlagDims,
           x: x,
@@ -151,9 +147,7 @@ const mergePDFs = async () => {
         if (pi + 1 < fPages) {
           var sfy = 20;
 
-          const secAmericanFlag = await mergedPdf.embedPage(
-            pdf.getPages()[pi + 1]
-          );
+          const secAmericanFlag = await mergedPdf.embedPage(pdf.getPages()[pi + 1]);
 
           if ((countPages + pi + 1) % 2 != 0) {
             sfy = page.getHeight() - secAmericanFlag.height - 20;
