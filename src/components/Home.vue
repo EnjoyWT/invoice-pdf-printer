@@ -32,7 +32,22 @@
       <p class="text-gray-600">将PDF文件拖拽到这里</p>
     </div> -->
 
-    <iframe v-if="pdfSrc" class="w-8/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
+    <!-- <iframe
+      v-if="pdfSrc"
+      class="w-8/12 h-full"
+      :src="pdfSrc"
+      frameborder="0"
+    ></iframe> -->
+    <div v-if="pdfSrc" class="w-full h-full flex justify-around">
+      <iframe class="w-9/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
+      <div
+        class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-2/12 h-full"
+        @dragover.prevent
+        @drop="handleDrop"
+      >
+        <p class="text-gray-600">将发票文件拖拽这里,会自动的追加左边</p>
+      </div>
+    </div>
     <div
       v-else
       class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
@@ -147,7 +162,9 @@ const mergePDFs = async () => {
         if (pi + 1 < fPages) {
           var sfy = 20;
 
-          const secAmericanFlag = await mergedPdf.embedPage(pdf.getPages()[pi + 1]);
+          const secAmericanFlag = await mergedPdf.embedPage(
+            pdf.getPages()[pi + 1]
+          );
 
           if ((countPages + pi + 1) % 2 != 0) {
             sfy = page.getHeight() - secAmericanFlag.height - 20;
@@ -172,7 +189,7 @@ const mergePDFs = async () => {
     const mergedPdfBlob = new Blob([mergedPdfBytes], {
       type: "application/pdf",
     });
-    const fileURL = URL.createObjectURL(mergedPdfBlob);
+    // const fileURL = URL.createObjectURL(mergedPdfBlob);
 
     displayPDF(mergedPdfBlob);
     // window.open(fileURL);
