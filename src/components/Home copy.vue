@@ -1,7 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-top h-full w-full">
-    <!-- 使用 ref 获取 mb-8 元素 -->
-    <div ref="header" class="mb-8">
+    <div class="mb-8">
       <div class="flex flex-row items-center space-x-4">
         <label
           for="fileInput"
@@ -25,10 +24,24 @@
         </button>
       </div>
     </div>
-    <div v-if="pdfSrc" class="w-full flex h-full" >
+    <!-- <div
+      class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
+      @dragover.prevent
+      @drop="handleDrop"
+    >
+      <p class="text-gray-600">将PDF文件拖拽到这里</p>
+    </div> -->
+
+    <!-- <iframe
+      v-if="pdfSrc"
+      class="w-8/12 h-full"
+      :src="pdfSrc"
+      frameborder="0"
+    ></iframe> -->
+    <div v-if="pdfSrc" class="w-full h-full flex justify-around">
       <iframe class="w-9/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
       <div
-        class="border border-dashed border-gray-400 rounded-lg ml-4  pl-4 px-4 py-8 text-center w-[150px] h-full"
+        class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-2/12 h-full"
         @dragover.prevent
         @drop="handleDrop"
       >
@@ -51,7 +64,7 @@
 import jsQR from 'jsqr'
 import { PDFDocument } from 'pdf-lib'
 import * as pdfjs from 'pdfjs-dist'
-import { ref, onMounted, watch } from 'vue';
+import { ref } from 'vue' // 导入 ref
 import { syncCallPdfToImg } from './Left/U'
 import LoadingView from './LoadingView.vue'
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
@@ -74,135 +87,23 @@ const handleDrop = (event) => {
   isLoading.value = false
 }
 
+const handleDrop2 = async (event) => {
+  event.preventDefault()
+  const files = event.dataTransfer.files
+  // selectedFiles.value.push(...files);
 
-
-
-const mergePDFs = async () => {
- 
+  let imgs = await syncCallPdfToImg(files)
   try {
-        const files = selectedFiles.value;
-        if (files.length === 0) {
-            throw new Error('请选择PDF文件');
-        }
-
-        isProcessing.value = true;
-        error.value = null;
-        progress.value = 0;
-
-        // 读取所有PDF文件
-        const allPages = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            console.log(`Processing file: ${file.name}`);
-            progress.value = (i / files.length) * 50; // 前50%进度用于读取文件
-
-            // 将File对象转换为ArrayBuffer
-            const arrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer);
-            const pageCount = pdfDoc.getPageCount();
-
-            // 收集所有页面信息
-            for (let j = 0; j < pageCount; j++) {
-                const page = pdfDoc.getPage(j);
-                allPages.push({
-                    doc: pdfDoc,
-                    page,
-                    width: page.getWidth(),
-                    height: page.getHeight(),
-                    sourceFile: file.name,
-                    pageNumber: j + 1
-                });
-            }
-        }
-
-        // 创建新的PDF文档
-        const outputPdfDoc = await PDFDocument.create();
-        const newPageCount = Math.ceil(allPages.length / 2);
-        const HALF_HEIGHT = A4.height / 2;
-
-        // 处理每一页
-        for (let i = 0; i < newPageCount; i++) {
-            progress.value = 50 + (i / newPageCount) * 50; // 后50%进度用于处理页面
-
-            // 创建新页面
-            const newPage = outputPdfDoc.addPage([A4.width, A4.height]);
-
-            // 处理上半部分
-            const topPageIndex = i * 2;
-            if (topPageIndex < allPages.length) {
-                const { page: topPage, width: topPageWidth, height: topPageHeight } = allPages[topPageIndex];
-                
-                const scaleX = (A4.width * 0.9) / topPageWidth;
-                const scaleY = (HALF_HEIGHT * 0.9) / topPageHeight;
-                const scale = Math.min(scaleX, scaleY);
-
-                const scaledWidth = topPageWidth * scale;
-                const scaledHeight = topPageHeight * scale;
-                const x = (A4.width - scaledWidth) / 2;
-                const y = A4.height - HALF_HEIGHT + ((HALF_HEIGHT - scaledHeight) / 2);
-
-                const [topPageDims] = await outputPdfDoc.embedPages([topPage]);
-                newPage.drawPage(topPageDims, {
-                    x,
-                    y,
-                    width: scaledWidth,
-                    height: scaledHeight,
-                });
-            }
-
-            // 处理下半部分
-            const bottomPageIndex = i * 2 + 1;
-            if (bottomPageIndex < allPages.length) {
-                const { page: bottomPage, width: bottomPageWidth, height: bottomPageHeight } = allPages[bottomPageIndex];
-                
-                const scaleX = (A4.width * 0.9) / bottomPageWidth;
-                const scaleY = (HALF_HEIGHT * 0.9) / bottomPageHeight;
-                const scale = Math.min(scaleX, scaleY);
-
-                const scaledWidth = bottomPageWidth * scale;
-                const scaledHeight = bottomPageHeight * scale;
-                const x = (A4.width - scaledWidth) / 2;
-                const y = (HALF_HEIGHT - scaledHeight) / 2;
-
-                const [bottomPageDims] = await outputPdfDoc.embedPages([bottomPage]);
-                newPage.drawPage(bottomPageDims, {
-                    x,
-                    y,
-                    width: scaledWidth,
-                    height: scaledHeight,
-                });
-            }
-        }
-
-        // 保存并下载文件
-        const pdfBytes = await outputPdfDoc.save();
-
-         const mergedPdfBlob = new Blob([pdfBytes], {
-          type: 'application/pdf'
-        })
-        // const fileURL = URL.createObjectURL(mergedPdfBlob);
-
-        displayPDF(mergedPdfBlob)
-        
-    } catch (err) {
-        error.value = err.message;
-        console.error('PDF处理错误:', err);
-    } finally {
-    }
+    const result = await OpencvQrUtil.detectQrCode(imgs[0])
+    // 处理QR码检测结果
+    console.log('QR code detection result:', result)
+  } catch (error) {
+    console.error('Error detecting QR code:', error)
+  }
 }
 
-const pdfPreviewUrl = ref(null)
-const defaultScasle = 0.95
-const A4 = {
-  width: 595.28,
-  height: 841.89
-}
-
-const isProcessing = ref(false);
-const progress = ref(0);
-const error = ref(null);
-
-const handleFileChange = async (event) => {
+const handleFileChange = (event) => {
+  event.preventDefault()
   let files = event.target.files
   selectedFiles.value.push(...files)
 
@@ -211,11 +112,98 @@ const handleFileChange = async (event) => {
   isLoading.value = false
 
   event.target.value = ''
+}
 
-};
+const mergePDFs = async () => {
+  try {
+    const mergedPdf = await PDFDocument.create()
+    var page = mergedPdf.addPage()
 
-const openFilePicker = () => {
-  document.getElementById('fileInput').click()
+    var countPages = 0
+
+    // 遍历选择的每个文件
+    for (let i = 0; i < selectedFiles.value.length; i++) {
+      const file = selectedFiles.value[i]
+      const reader = new FileReader()
+      // 读取文件内容
+      const fileContents = await new Promise((resolve, reject) => {
+        reader.onload = function (event) {
+          resolve(event.target.result)
+        }
+        reader.onerror = function (event) {
+          reject(new Error('文件读取错误。'))
+        }
+        reader.readAsArrayBuffer(file)
+      })
+      // 将PDF文件添加到合并的PDF文档中
+      const pdf = await PDFDocument.load(fileContents)
+      const pageDataArray = pdf.getPages()
+      const fPages = pageDataArray.length
+
+      if (countPages % 2 === 0 && countPages > 0) {
+        page = mergedPdf.addPage()
+      }
+
+      for (let pi = 0; pi < fPages; pi += 2) {
+        if (pi % 2 === 0 && pi > 0) {
+          page = mergedPdf.addPage()
+        }
+
+        const preamble = await mergedPdf.embedPage(pdf.getPages()[pi])
+
+        const americanFlagDims = preamble.scale(0.9)
+
+        var fy = page.getHeight() - americanFlagDims.height - 20
+        if ((countPages + pi) % 2 != 0) {
+          fy = 20
+        }
+        var x = (page.getWidth() - americanFlagDims.width) / 2
+
+        page.drawPage(preamble, {
+          ...americanFlagDims,
+          x: x,
+          y: fy
+        })
+
+        if (pi + 1 < fPages) {
+          var sfy = 20
+
+          const secAmericanFlag = await mergedPdf.embedPage(
+            pdf.getPages()[pi + 1]
+          )
+
+          if ((countPages + pi + 1) % 2 != 0) {
+            sfy = page.getHeight() - secAmericanFlag.height - 20
+            page = mergedPdf.addPage()
+          }
+          const secAmericanFlagDims = secAmericanFlag.scale(0.85)
+          var sx = (page.getWidth() - americanFlagDims.width) / 2
+
+          // Draw the preamble clipping in the center bottom of the page
+          page.drawPage(secAmericanFlag, {
+            ...secAmericanFlagDims,
+            x: sx,
+            y: sfy
+          })
+        }
+      }
+      countPages += fPages
+    }
+
+    // 使用浏览器自带预览功能，预览合并后的PDF
+    const mergedPdfBytes = await mergedPdf.save()
+    const mergedPdfBlob = new Blob([mergedPdfBytes], {
+      type: 'application/pdf'
+    })
+    // const fileURL = URL.createObjectURL(mergedPdfBlob);
+
+    displayPDF(mergedPdfBlob)
+
+    // convertPdfToImages(mergedPdfBytes)
+    // window.open(fileURL);
+  } catch (err) {
+    console.error('Error merging PDFs:', err)
+  }
 }
 
 const readFileAsArrayBuffer = (file) => {
