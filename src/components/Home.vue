@@ -211,6 +211,9 @@ const handleFileChange = async (event) => {
   mergePDFs()
   isLoading.value = false
 
+
+
+  
   event.target.value = null
 
 };
