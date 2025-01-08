@@ -25,6 +25,7 @@
         </button>
       </div>
     </div>
+    
     <div v-if="pdfSrc" class="w-full flex h-full justify-between" >
       <iframe class="w-9/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
       <div
