@@ -7,6 +7,9 @@
 ### 部署到Vercel
 [![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/EnjoyWT/invoice-pdf-printer)
 
+### 已支持
+- [x] 1. 选择发票可以追加更多发票
+- [x] 2. 支持不同尺寸大小的发票，默认A4纸上显示两个发票
 ### TODO
  以下任务由 Boss 驱动开发
 - [ ] 1. 支持多种布局
