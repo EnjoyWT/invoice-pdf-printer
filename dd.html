@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发票打印</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 90%;
+      margin: 20px auto;
+    }
+
+    .file-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      position: relative;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      text-align: center;
+    }
+
+    .card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+
+    .card .amount {
+      padding: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      background-color: #f4f4f4;
+    }
+
+    .card .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .actions {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .actions .btn {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="file-actions">
+      <button class="btn btn-primary" id="chooseFile">选择文件</button>
+      <button class="btn btn-danger" id="clearAll">清空全部</button>
+    </div>
+
+    <div class="grid" id="fileGrid">
+      <!-- 动态生成缩略图 -->
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="mergeAndPrint">合并并打印</button>
+    </div>
+  </div>
+
+  <script>
+    const fileGrid = document.getElementById('fileGrid');
+    const files = []; // 模拟文件列表
+
+    // 添加文件（示例）
+    function addFile(file, amount) {
+      files.push({ file, amount });
+
+      // 创建缩略图卡片
+      const card = document.createElement('div');
+      card.classList.add('card');
+
+      // 示例缩略图
+      const img = document.createElement('img');
+      img.src = 'https://via.placeholder.com/150'; // 替换为实际缩略图
+      img.alt = '缩略图';
+
+      // 金额显示
+      const amountDiv = document.createElement('div');
+      amountDiv.classList.add('amount');
+      amountDiv.innerText = `金额: ￥${amount}`;
+
+      // 删除按钮
+      const deleteBtn = document.createElement('button');
+      deleteBtn.classList.add('delete-btn');
+      deleteBtn.innerText = '×';
+      deleteBtn.addEventListener('click', () => {
+        fileGrid.removeChild(card); // 移除卡片
+        const index = files.indexOf(file);
+        if (index > -1) files.splice(index, 1); // 删除文件数据
+      });
+
+      card.appendChild(img);
+      card.appendChild(amountDiv);
+      card.appendChild(deleteBtn);
+      fileGrid.appendChild(card);
+    }
+
+    // 模拟文件选择
+    document.getElementById('chooseFile').addEventListener('click', () => {
+      const fileName = `文件${files.length + 1}`;
+      const amount = (Math.random() * 100).toFixed(2); // 随机金额
+      addFile(fileName, amount);
+    });
+
+    // 清空文件
+    document.getElementById('clearAll').addEventListener('click', () => {
+      if (confirm('确定清空全部文件吗？')) {
+        files.length = 0;
+        fileGrid.innerHTML = '';
+      }
+    });
+
+    // 合并并打印
+    document.getElementById('mergeAndPrint').addEventListener('click', () => {
+      if (files.length === 0) {
+        alert('请先选择文件');
+        return;
+      }
+      alert('合并PDF并打印功能开发中...');
+    });
+  </script>
+</body>
+
+</html>
