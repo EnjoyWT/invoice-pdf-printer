@@ -100,8 +100,7 @@
 import jsQR from 'jsqr'
 import { PDFDocument } from 'pdf-lib'
 import * as pdfjs from 'pdfjs-dist'
-import { ref, onMounted, watch } from 'vue';
-import { syncCallPdfToImg } from './Left/U'
+import { ref } from 'vue';
 import LoadingView from './LoadingView.vue'
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
 
@@ -320,7 +319,7 @@ async function processQRCodeFromPages(allPages) {
         const pdfData = new Uint8Array(pdfBytes);
 
         // 使用 pdfjs-dist 加载 pdf 文档
-        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        const loadingTask = pdfjs.getDocument({ data: pdfData });
         const pdfDocument = await loadingTask.promise;
 
         // 获取当前页面
