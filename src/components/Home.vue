@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-top h-full w-full">
-    <!-- 使用 ref 获取 mb-8 元素 -->
+    <!-- Header 区域 -->
     <div ref="header" class="mb-8">
       <div class="flex flex-row items-center space-x-4">
         <label
@@ -26,16 +26,63 @@
       </div>
     </div>
 
-    <div v-if="pdfSrc" class="w-full flex h-full justify-between" >
+    <!-- 文件预览区域 -->
+    <div v-if="pdfSrc" class="w-full flex h-[calc(100%-4rem)] ">
       <iframe class="w-9/12 h-full" :src="pdfSrc" frameborder="0"></iframe>
+
+      <!-- 新的 Cell 滚动显示区域 -->
       <div
-        class="border border-dashed border-gray-400 rounded-lg ml-4  pl-4 px-4 py-8 text-center w-2/12 h-full"
+        class="border border-dashed border-gray-400 rounded-lg px-4 py-4 w-3/12 h-full overflow-y-auto ml-4"
         @dragover.prevent
         @drop="handleDrop"
       >
-        <p class="text-gray-600">将发票文件拖拽这里,会自动的追加左边</p>
+      <TransitionGroup
+    name="cell-list"
+    tag="div"
+    class="space-y-4 "
+  >
+    <div
+      v-for="(item, index) in cells"
+      :key="item.pageNumber"
+      class="relative cell-item p-4 bg-gray-100 rounded-lg shadow-md transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
+    >
+      <button
+        class="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+        @click="removeCell(index)"
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          class="h-4 w-4" 
+          viewBox="0 0 20 20" 
+          fill="currentColor"
+        >
+          <path 
+            fill-rule="evenodd" 
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" 
+            clip-rule="evenodd" 
+          />
+        </svg>
+      </button>
+      <p class="text-gray-800 font-semibold text-left truncate ">序号: {{ index + 1 }}</p>
+
+      <p class="text-gray-600 text-sm text-left truncate">类型: {{ getInvoiceType(item.type)   }}</p>
+      <!-- <p class="text-gray-600 text-sm text-left truncate">发票代码: {{item.code }}</p>
+      <p class="text-gray-600 text-sm text-left truncate">发票号码: {{item.number }}</p> -->
+      <!-- <p class="text-gray-800 font-semibold text-left truncate">金额: ￥{{item.amount }}</p> -->
+      <p class="text-gray-800 font-semibold text-left truncate">
+        金额: {{item.amount}} {{ item.type === '10' ? '(不含税)' : '(含税)' }}
+      </p>
+      <p class="text-gray-600 text-sm text-left truncate">开票日期: {{item.date }}</p>
+      <p class="text-gray-600 text-sm text-left truncate ">文件名: {{ item.fileName}}</p>
+
+    </div>
+  </TransitionGroup>
+
+        
       </div>
     </div>
+
+    <!-- 空状态区域 -->
     <div
       v-else
       class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
@@ -44,6 +91,7 @@
     >
       <p class="text-gray-600">将PDF文件拖拽到这里</p>
     </div>
+
     <LoadingView :isLoading="isLoading" />
   </div>
 </template>
@@ -65,6 +113,42 @@ const clear = () => {
   pdfSrc.value = null
 }
 
+
+const defaultScasle = 0.95
+const A4 = {
+  width: 595.28,
+  height: 841.89
+}
+// 存储发票数据
+const cells = ref([
+
+]);
+
+// 添加发票
+const addCell = (file) => {
+  const newCell = {
+    id: Date.now(),
+    amount: (Math.random() * 1000).toFixed(2), // 模拟金额数据
+  };
+  cells.value.push(newCell);
+};
+
+// 删除发票
+const removeCell = (index) => {
+  // cells.value.splice(index, 1);
+
+  // setTimeout(() => {
+    cells.value.splice(index, 1)
+    selectedFiles.value.splice(index, 1)
+    
+    isLoading.value = true
+    mergePDFs()
+    isLoading.value = false
+    if (cells.value.length === 0) {
+      clear()
+    }
+  // }, 500) 
+};
 const handleDrop = (event) => {
   event.preventDefault()
   const files = event.dataTransfer.files
@@ -74,8 +158,6 @@ const handleDrop = (event) => {
   mergePDFs()
   isLoading.value = false
 }
-
-
 
 
 const mergePDFs = async () => {
@@ -116,6 +198,8 @@ const mergePDFs = async () => {
             }
         }
 
+        processQRCodeFromPages(allPages)
+
         // 创建新的PDF文档
         const outputPdfDoc = await PDFDocument.create();
         const newPageCount = Math.ceil(allPages.length / 2);
@@ -133,8 +217,8 @@ const mergePDFs = async () => {
             if (topPageIndex < allPages.length) {
                 const { page: topPage, width: topPageWidth, height: topPageHeight } = allPages[topPageIndex];
                 
-                const scaleX = (A4.width * 0.9) / topPageWidth;
-                const scaleY = (HALF_HEIGHT * 0.9) / topPageHeight;
+                const scaleX = (A4.width * defaultScasle) / topPageWidth;
+                const scaleY = (HALF_HEIGHT * defaultScasle) / topPageHeight;
                 const scale = Math.min(scaleX, scaleY);
 
                 const scaledWidth = topPageWidth * scale;
@@ -156,8 +240,8 @@ const mergePDFs = async () => {
             if (bottomPageIndex < allPages.length) {
                 const { page: bottomPage, width: bottomPageWidth, height: bottomPageHeight } = allPages[bottomPageIndex];
                 
-                const scaleX = (A4.width * 0.9) / bottomPageWidth;
-                const scaleY = (HALF_HEIGHT * 0.9) / bottomPageHeight;
+                const scaleX = (A4.width * defaultScasle) / bottomPageWidth;
+                const scaleY = (HALF_HEIGHT * defaultScasle) / bottomPageHeight;
                 const scale = Math.min(scaleX, scaleY);
 
                 const scaledWidth = bottomPageWidth * scale;
@@ -192,12 +276,6 @@ const mergePDFs = async () => {
     }
 }
 
-const pdfPreviewUrl = ref(null)
-const defaultScasle = 0.95
-const A4 = {
-  width: 595.28,
-  height: 841.89
-}
 
 const isProcessing = ref(false);
 const progress = ref(0);
@@ -211,33 +289,9 @@ const handleFileChange = async (event) => {
   mergePDFs()
   isLoading.value = false
 
-
-
-  
   event.target.value = null
 
 };
-
-const openFilePicker = () => {
-  document.getElementById('fileInput').click()
-}
-
-const readFileAsArrayBuffer = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsArrayBuffer(file)
-  })
-}
-
-const downloadPDF = (bytes, filename) => {
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  const link = document.createElement('a')
-  link.href = window.URL.createObjectURL(blob)
-  link.download = filename
-  link.click()
-}
 
 const displayPDF = (file) => {
   if (file.type === 'application/pdf') {
@@ -251,58 +305,78 @@ const displayPDF = (file) => {
   }
 }
 
-async function convertPdfToImages(pdfBytes) {
-  const images = []
 
-  // Load the PDF document
-  const loadingTask = pdfjs.getDocument({ data: pdfBytes })
-  const pdf = await loadingTask.promise
+// 添加一个处理函数，用于识别 allPages 中的二维码
+async function processQRCodeFromPages(allPages) {
 
-  // Iterate through each page
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum)
-    const scale = 1.5
-    const viewport = page.getViewport({ scale })
+    // 遍历 allPages 中的所有页面
+    let cellData = []
+    
+    for (let i = 0; i < allPages.length; i++) {
+        const { doc, pageNumber, sourceFile } = allPages[i];
 
-    // Create a canvas for rendering
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    canvas.height = viewport.height
-    canvas.width = viewport.width
+        // 将 pdf-lib 文档保存为二进制数据
+        const pdfBytes = await doc.save();
+        const pdfData = new Uint8Array(pdfBytes);
 
-    // Render the page on the canvas
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
+        // 使用 pdfjs-dist 加载 pdf 文档
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        const pdfDocument = await loadingTask.promise;
+
+        // 获取当前页面
+        const pdfPage = await pdfDocument.getPage(pageNumber);
+        const viewport = pdfPage.getViewport({ scale: 2 }); // 设置缩放比例，选择合适的值
+
+        // 创建一个 canvas 来渲染页面
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        // 渲染页面到 canvas 上
+        await pdfPage.render({ canvasContext: context, viewport }).promise;
+
+        // 提取 canvas 上的图像数据
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+        // 使用 jsQR 解析二维码
+        const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+        if (qrCode) {
+            console.log(`Page ${pageNumber}: QR Code Found -`, qrCode.data);
+        } else {
+            console.log(`Page ${pageNumber}: No QR Code Found`);
+        }
+
+        let res =  await parseQRCode(pageNumber,qrCode.data)
+        res.fileName = sourceFile
+        cellData.push(res)  
     }
-    await page.render(renderContext).promise
+    cells.value = cellData
 
-    // Convert the canvas to an image
-    const imageDataUrl = canvas.toDataURL('image/png')
-    // 创建 Image 对象用于解析二维码
-    const imageData = getImageData(imageDataUrl)
-    // console.log(imageData)
-    // parseQRCode(imageData);
-    images.push(imageDataUrl)
+}
+
+async function parseQRCode(pageNumber, qrCodeData) {
+
+  if (qrCodeData === null) {
+    return {pageNumber:pageNumber}
+  }
+  // 使用 jsQR 解析二维码
+  //01,10,031002100411,40235865,83.36,20211229,10743957938938902364,28FE,
+  // 01: 固定值
+  // 10: 发票类型
+  // 031002100411: 发票代码
+  // 40235865: 发票号码
+  // 83.36: 发票金额
+  // 20211229: 开票日期
+  // 10743957938938902364: 校验码
+
+  let [constNumber,type,code,number,amount,date,checkCode] =  qrCodeData.split(",")
+   
+  const qrCodeObject = {pageNumber:pageNumber, constNumber, type, code, number, amount, date, checkCode };
+  return  qrCodeObject
+
   }
 
-  return images
-}
-// 自定义函数示例
-function extractAmountFromText(text) {
-  const regexPattern = /¥(\d+(\.\d{1,2})?)/ // 正则表达式
-
-  const match = input.match(regexPattern) // 匹配
-
-  if (match) {
-    const extractedNumber = match[1] // 提取第一个捕获组
-
-    console.log(extractedNumber) // 输出: 54.00
-    return extractedNumber
-  } else {
-    return 0
-  }
-}
 
 function getImageData(imageDataUrl) {
   // 创建一个 Image 对象
@@ -326,13 +400,41 @@ function getImageData(imageDataUrl) {
     }
   })
 }
-async function parseQRCode(imageData) {
-  // 使用 jsQR 解析二维码
-  const code = jsQR(imageData.data, imageData.width, imageData.height)
-  if (code) {
-    this.result = `二维码内容: ${code.data}`
-  } else {
-    this.result = '未识别到二维码'
+
+const getInvoiceType = (type) => {
+  switch(type) {
+    case '10': return '专用发票'
+    case '04': return '普通发票'
+    case '01': return '专用发票'
+    default: return '未知类型'
   }
 }
 </script>
+<style scoped>
+.cell-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 80px;
+}
+
+/* 删除动画时让元素脱离文档流 */
+.cell-list-leave-active {
+  position: absolute; /* 元素脱离文档流 */
+  top: 0; /* 确保动画位置正确 */
+  left: 0;
+  width: 100%; /* 保持宽度不变 */
+  transition: all 0.5s ease;
+}
+
+.cell-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px); /* 右移淡出 */
+}
+
+/* 元素移动动画 */
+.cell-list-move {
+  transition: transform 0.5s ease; /* 确保移动动画一致 */
+}
+</style>
