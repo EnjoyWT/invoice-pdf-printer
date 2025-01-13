@@ -166,6 +166,7 @@ const isLoading = ref(false);
 const clear = () => {
   selectedFiles.value = [];
   pdfSrc.value = null;
+  cells.value = [];
 };
 
 const defaultScasle = 0.95;
@@ -345,7 +346,7 @@ const mergePDFs = async () => {
     // 延迟关闭处理提示
     setTimeout(() => {
       isProcessing.value = false;
-    }, 1000); // 延长到1.5秒
+    }, 500); // 延长到1.5秒
   }
 };
 
@@ -494,11 +495,11 @@ function getImageData(imageDataUrl) {
 const getInvoiceType = (type) => {
   switch (type) {
     case "10":
-      return "专用发票";
+      return "增值普通发票";
     case "04":
       return "普通发票";
     case "01":
-      return "专用发票";
+      return "增值专用发票";
     default:
       return "未知类型";
   }

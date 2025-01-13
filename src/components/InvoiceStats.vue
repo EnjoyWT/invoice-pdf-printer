@@ -66,8 +66,12 @@ const totalAmount = computed(() => {
   return filteredInvoices.value
     .reduce((sum, invoice) => {
       const amount = Number(invoice.amount) || 0;
-      console.log("单张发票金额:", amount);
-      return sum + amount;
+      const taxRate = 0.03;
+      const finalAmount = ["01", "04", "10"].includes(invoice.type)
+        ? amount * (1 + taxRate)
+        : amount;
+      console.log("单张发票金额(含税):", finalAmount);
+      return sum + finalAmount;
     }, 0)
     .toFixed(2);
 });
