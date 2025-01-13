@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "jsqr": "^1.4.0",
+    "lodash-es": "^4.17.21",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.5.141",
     "tesseract.js": "^5.1.1",
