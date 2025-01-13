@@ -97,11 +97,13 @@ const normalInvoiceCount = computed(
 .stats-card {
   background: white;
   border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 1rem;
   background: linear-gradient(to right bottom, #ffffff, #f8fafc);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  /* border: 0.01px solid rgba(226, 232, 240, 0.8); */
 }
 
 .stats-header {
