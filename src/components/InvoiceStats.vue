@@ -91,13 +91,17 @@ const normalInvoiceCount = computed(
 <style scoped>
 .stats-container {
   width: 100%;
+  padding: 0.5rem;
 }
 
 .stats-card {
   background: white;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 1rem;
+  background: linear-gradient(to right bottom, #ffffff, #f8fafc);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .stats-header {
@@ -105,21 +109,38 @@ const normalInvoiceCount = computed(
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .stats-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .period-select {
   padding: 0.25rem 0.5rem;
   border-radius: 0.375rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   background-color: white;
   color: #64748b;
   font-size: 0.875rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  outline: none;
+}
+
+.period-select:hover {
+  border-color: #94a3b8;
+}
+
+.period-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .stats-grid {
@@ -149,21 +170,32 @@ const normalInvoiceCount = computed(
 
 .stat-item {
   padding: 0.75rem;
-  background: #f8fafc;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
   border-radius: 0.375rem;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .stat-label {
   font-size: 0.875rem;
   color: #64748b;
   margin-bottom: 0.25rem;
+  font-weight: 500;
 }
 
 .stat-value {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1e293b;
+  background: linear-gradient(45deg, #3b82f6, #2563eb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 </style> 
