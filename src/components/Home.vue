@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col items-center justify-top h-full w-full">
     <!-- Header 区域和统计信息 -->
-    <div ref="header" class="w-full mb-8">
+    <div ref="header" class="w-full mb-8 mt-16">
       <!-- 按钮组居中显示 -->
       <div class="flex justify-between items-center px-4">
         <!-- 左侧按钮组 -->
@@ -76,8 +76,11 @@
     />
 
     <!-- PDF预览和发票信息区域 -->
-    <div v-if="pdfSrc" class="w-full flex h-[calc(100vh-15rem)]">
-      <div class="w-9/12 h-full">
+    <div
+      v-if="pdfSrc"
+      class="w-full flex h-[calc(100vh-15rem)] justify-center space-x-10"
+    >
+      <div class="w-7/12 h-full">
         <iframe class="w-full h-full" :src="pdfSrc" frameborder="0"></iframe>
       </div>
 
@@ -524,6 +527,12 @@ const validateFile = (file) => {
     };
     reader.readAsArrayBuffer(file);
   });
+};
+
+// 添加登录按钮的处理函数
+const handleLogin = () => {
+  // 登录逻辑
+  console.log("登录按钮被点击");
 };
 </script>
 <style scoped>

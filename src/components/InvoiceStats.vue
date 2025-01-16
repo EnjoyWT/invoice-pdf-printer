@@ -197,6 +197,7 @@ const normalInvoiceCount = computed(
   font-size: 1.125rem;
   font-weight: 600;
   background: linear-gradient(45deg, #3b82f6, #2563eb);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

@@ -1,23 +1,32 @@
-<script setup>
-import Home from "./components/Home.vue";
-</script>
-
 <template>
-  <Home />
-  <!-- <newTest /> -->
+  <Layout>
+    <template #header>
+      <button
+        class="text-black font-bold py-2 px-4 rounded"
+        @click="handleLogin"
+      >
+        登录
+      </button>
+    </template>
+
+    <template #body>
+      <Home />
+    </template>
+
+    <template #footer>
+      <p>版权所有 © 2023</p>
+    </template>
+  </Layout>
 </template>
 
+<script setup>
+import Home from "./components/Home.vue";
+import Layout from "./components/Layout.vue";
+
+const handleLogin = () => {
+  console.log("登录按钮被点击");
+};
+</script>
+
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
 </style>
