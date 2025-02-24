@@ -153,6 +153,9 @@ import { PDFDocument } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
 import { ref } from "vue";
 import LoadingView from "./LoadingView.vue";
+import { debounce } from "lodash-es";
+import ProgressBar from "./ProgressBar.vue";
+import ThumbnailView from "./ThumbnailView.vue";
 import InvoiceStats from "./InvoiceStats.vue";
 import ProcessingToast from "./ProcessingToast.vue";
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -173,6 +176,15 @@ const A4 = {
 };
 // 存储发票数据
 const cells = ref([]);
+
+// 添加发票
+const addCell = (file) => {
+  const newCell = {
+    id: Date.now(),
+    amount: (Math.random() * 1000).toFixed(2), // 模拟金额数据
+  };
+  cells.value.push(newCell);
+};
 
 // 删除发票
 const removeCell = (index) => {
@@ -306,6 +318,42 @@ async function processFiles(files) {
 
   await Promise.all(filePromises);
   return allPages;
+}
+
+async function getPageDimensions(page, pdfDoc, pageIndex) {
+  const cropBox = page.getCropBox();
+  let width,
+    height,
+    processedPage = page;
+
+  if (cropBox && cropBox.width > 0 && cropBox.height > 0) {
+    const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [pageIndex]);
+    const bleedBox = page.getBleedBox() || page.getCropBox();
+
+    if (bleedBox && bleedBox.width > 0 && bleedBox.height > 0) {
+      copiedPage.setSize(bleedBox.width, bleedBox.height);
+      copiedPage.translateContent(-bleedBox.x, -bleedBox.y);
+      copiedPage.setCropBox(0, 0, bleedBox.width, bleedBox.height);
+      copiedPage.setMediaBox(0, 0, bleedBox.width, bleedBox.height);
+      width = bleedBox.width;
+      height = bleedBox.height;
+      processedPage = copiedPage;
+    } else {
+      copiedPage.setSize(cropBox.width, cropBox.height);
+      copiedPage.translateContent(-cropBox.x, -cropBox.y);
+      copiedPage.setCropBox(0, 0, cropBox.width, cropBox.height);
+      copiedPage.setMediaBox(0, 0, cropBox.width, cropBox.height);
+      width = cropBox.width;
+      height = cropBox.height;
+      processedPage = copiedPage;
+    }
+  } else {
+    const mediaBox = page.getMediaBox();
+    width = mediaBox.width;
+    height = mediaBox.height;
+  }
+
+  return { width, height, page: processedPage };
 }
 
 async function createMergedPDF(allPages) {
@@ -509,6 +557,27 @@ const getInvoiceType = (type) => {
     default:
       return "未知类型";
   }
+};
+
+// 添加文件类型的严格验证
+const validateFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = (e) => {
+      const arr = new Uint8Array(e.target.result).subarray(0, 4);
+      let header = "";
+      for (let i = 0; i < arr.length; i++) {
+        header += arr[i].toString(16);
+      }
+      // 检查PDF文件头
+      if (header.startsWith("25504446")) {
+        resolve(true);
+      } else {
+        reject(new Error("非法的PDF文件"));
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
 };
 </script>
 <style scoped>
