@@ -1,34 +1,21 @@
 <template>
   <div class="stats-container">
-    <div class="stats-card">
-      <div class="stats-header">
-        <h3 class="stats-title">发票统计</h3>
-        <div class="stats-period">
-          <select v-model="period" class="period-select">
-            <option value="all">全部</option>
-            <option value="month">本月</option>
-            <option value="year">本年</option>
-          </select>
-        </div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span class="stat-label">总金额</span>
+        <span class="stat-value">¥{{ totalAmount }}</span>
       </div>
-
-      <div class="stats-grid">
-        <div class="stat-item">
-          <span class="stat-label">总金额</span>
-          <span class="stat-value">¥{{ totalAmount }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">发票数量</span>
-          <span class="stat-value">{{ invoiceCount }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">专票数量</span>
-          <span class="stat-value">{{ specialInvoiceCount }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">普票数量</span>
-          <span class="stat-value">{{ normalInvoiceCount }}</span>
-        </div>
+      <div class="stat-item">
+        <span class="stat-label">发票数量</span>
+        <span class="stat-value">{{ invoiceCount }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">专票数量</span>
+        <span class="stat-value">{{ specialInvoiceCount }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">普票数量</span>
+        <span class="stat-value">{{ normalInvoiceCount }}</span>
       </div>
     </div>
   </div>
@@ -36,6 +23,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { getInvoiceType } from "../utils/invoiceUtils"; // 导入公共函数
 
 const props = defineProps({
   invoices: {
@@ -62,15 +50,16 @@ const filteredInvoices = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  console.log("计算总金额，发票数据:", props.invoices);
+  // console.log("计算总金额，发票数据:", props.invoices);
   return filteredInvoices.value
     .reduce((sum, invoice) => {
       const amount = Number(invoice.amount) || 0;
       const taxRate = 0.03;
+      // "01", "04", "10" 不包含税额
       const finalAmount = ["01", "04", "10"].includes(invoice.type)
         ? amount * (1 + taxRate)
         : amount;
-      console.log("单张发票金额(含税):", finalAmount);
+      // console.log("单张发票金额(含税):", finalAmount);
       return sum + finalAmount;
     }, 0)
     .toFixed(2);
