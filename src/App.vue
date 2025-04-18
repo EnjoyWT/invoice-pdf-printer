@@ -72,21 +72,27 @@ export default {
 }
 
 .mobile-notice {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   padding-top: 15vh; /* 黄金比例: 约在垂直38.2%位置开始 */
+  background-color: #f8fafc; /* 浅色背景 */
 }
 
 .content-wrapper {
-  background-color: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(to right bottom, #ffffff, #f5f7fa);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15); /* 蓝色阴影 */
   padding: 30px 20px;
   width: 85%;
   max-width: 400px;
   text-align: center;
   animation: fadeIn 0.8s ease;
+  border: 1px solid rgba(59, 130, 246, 0.2); /* 淡蓝色边框 */
 }
 
 @keyframes fadeIn {
@@ -110,7 +116,7 @@ export default {
 .device {
   width: 45px;
   height: 70px;
-  border: 3px solid #4a6fa5;
+  border: 3px solid #3b82f6; /* 蓝色500 */
   border-radius: 8px;
   position: absolute;
   top: 0;
@@ -123,7 +129,7 @@ export default {
   position: absolute;
   width: 8px;
   height: 3px;
-  background: #4a6fa5;
+  background: #3b82f6; /* 蓝色500 */
   bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
@@ -133,7 +139,7 @@ export default {
 .slash {
   width: 80px;
   height: 3px;
-  background-color: #e74c3c;
+  background-color: #dc2626; /* 保留红色的禁止符号 */
   position: absolute;
   top: 50%;
   left: 0;
@@ -145,13 +151,13 @@ h1 {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 15px;
-  color: #2c3e50;
+  color: #1e3a8a; /* 深蓝色 */
 }
 
 p {
   font-size: 14px;
   line-height: 1.5;
-  color: #5d6d7e;
+  color: #475569; /* 暗灰色 */
   margin-bottom: 20px;
 }
 
@@ -165,7 +171,7 @@ p {
 .monitor {
   width: 80px;
   height: 55px;
-  border: 3px solid #4a6fa5;
+  border: 3px solid #3b82f6; /* 蓝色500 */
   border-radius: 4px;
   position: absolute;
   top: 0;
@@ -178,7 +184,7 @@ p {
   position: absolute;
   width: 25px;
   height: 3px;
-  background: #4a6fa5;
+  background: #3b82f6; /* 蓝色500 */
   bottom: -12px;
   left: 50%;
   transform: translateX(-50%);
@@ -190,7 +196,7 @@ p {
   position: absolute;
   width: 40px;
   height: 3px;
-  background: #4a6fa5;
+  background: #3b82f6; /* 蓝色500 */
   bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
