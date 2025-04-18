@@ -76,7 +76,7 @@ export default {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   display: flex;
   justify-content: center;
   padding-top: 15vh; /* 黄金比例: 约在垂直38.2%位置开始 */
@@ -89,6 +89,7 @@ export default {
   box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15); /* 蓝色阴影 */
   padding: 30px 20px;
   width: 85%;
+  max-height: fit-content; /* 或具体值比如 600px */
   max-width: 400px;
   text-align: center;
   animation: fadeIn 0.8s ease;
