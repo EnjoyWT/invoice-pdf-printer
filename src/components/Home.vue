@@ -1,7 +1,9 @@
 <template>
-  <div class="flex flex-col items-center justify-top h-full w-full">
+  <div
+    class="flex flex-col min-h-screen w-full px-4 py-6 items-center justify-center"
+  >
     <!-- Header 区域和统计信息 -->
-    <div ref="header" class="w-full mb-8">
+    <div ref="headerRef" class="w-full mb-10 px-4">
       <!-- 按钮组居中显示 -->
       <div class="flex justify-between items-center px-4">
         <!-- 左侧按钮组 -->
@@ -64,12 +66,11 @@
           <InvoiceStats :invoices="cells" />
         </div> -->
         <!-- 右侧统计信息 -->
-        <div v-if="cells.length > 0" class="absolute right-4 top-0">
+        <div v-if="cells.length > 0" class="absolute right-4 top-2">
           <InvoiceStats :invoices="cells" />
         </div>
       </div>
     </div>
-
     <!-- 处理进度提示 -->
     <ProcessingToast
       :show="isProcessing"
@@ -79,12 +80,15 @@
       @close="error = null"
     />
 
-    <!-- PDF预览和发票信息区域 -->
-    <div v-if="pdfSrc" class="w-full flex h-[calc(100vh)]">
-      <div class="w-9/12 h-full">
+    <div
+      v-if="pdfSrc"
+      class="w-full flex items-center justify-center"
+      :style="{ height: pdfAreaHeight + 'px' }"
+    >
+      <div class="w-9/12 h-full p-4">
         <iframe class="w-full h-full" :src="pdfSrc" frameborder="0"></iframe>
       </div>
-      <div class="w-3/12 ml-4 h-full">
+      <div class="w-3/12 ml-4 h-full p-4">
         <!-- 发票列表 -->
         <div
           class="border border-dashed border-gray-400 rounded-lg px-4 py-4 overflow-y-auto h-full"
@@ -153,7 +157,7 @@
 import jsQR from "jsqr";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
-import { ref, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import LoadingView from "./LoadingView.vue";
 import InvoiceStats from "./InvoiceStats.vue";
 import ProcessingToast from "./ProcessingToast.vue";
@@ -167,6 +171,42 @@ const cells = ref([]);
 const isProcessing = ref(false);
 const progress = ref(0);
 const error = ref(null);
+
+const headerRef = ref(null);
+const pdfAreaHeight = ref(0);
+let ro = null;
+
+const OUTER_VERTICAL_PADDING = 48; // py-6 = 1.5rem = 24px × 2
+
+function updatePdfAreaHeight() {
+  if (headerRef.value) {
+    console.log(headerRef.value);
+    const headerHeight = headerRef.value.offsetHeight;
+    pdfAreaHeight.value =
+      window.innerHeight - headerHeight - OUTER_VERTICAL_PADDING;
+  }
+}
+
+onMounted(() => {
+  nextTick(() => {
+    updatePdfAreaHeight();
+    window.addEventListener("resize", updatePdfAreaHeight);
+
+    // 监听header高度变化
+    ro = new ResizeObserver(updatePdfAreaHeight);
+    if (headerRef.value) {
+      ro.observe(headerRef.value);
+    }
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", updatePdfAreaHeight);
+  if (ro && headerRef.value) {
+    ro.unobserve(headerRef.value);
+    ro.disconnect();
+  }
+});
 
 const clear = () => {
   selectedFiles.value = [];
@@ -459,11 +499,6 @@ async function parseQRCode(pageNumber, qrCodeData) {
     checkCode,
   };
 }
-
-// 组件卸载时释放资源
-onUnmounted(() => {
-  if (pdfSrc.value) URL.revokeObjectURL(pdfSrc.value);
-});
 </script>
 <style scoped>
 .cell-item {
