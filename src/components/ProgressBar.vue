@@ -16,7 +16,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineProps({
   percentage: {
     type: Number,
@@ -33,7 +33,7 @@ defineProps({
   },
 });
 
-const getStatusText = (percentage) => {
+const getStatusText = (percentage: number): string => {
   if (percentage < 50) {
     return "正在读取文件...";
   } else if (percentage < 80) {

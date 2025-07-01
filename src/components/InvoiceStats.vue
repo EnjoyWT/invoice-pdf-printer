@@ -21,20 +21,27 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from "vue";
+<script setup lang="ts">
+import { ref, computed, type Ref } from "vue";
 import { getInvoiceType } from "../utils/invoiceUtils"; // 导入公共函数
 
-const props = defineProps({
-  invoices: {
-    type: Array,
-    required: true,
-  },
-});
+interface InvoiceCell {
+  pageNumber: number;
+  fileName: string;
+  type: string;
+  amount: string;
+  date: string;
+  constNumber?: string;
+  code?: string;
+  number?: string;
+  checkCode?: string;
+}
 
-const period = ref("all");
+const props = defineProps<{ invoices: InvoiceCell[] }>();
 
-const filteredInvoices = computed(() => {
+const period: Ref<string> = ref("all");
+
+const filteredInvoices = computed<InvoiceCell[]>(() => {
   if (period.value === "all") return props.invoices;
 
   const now = new Date();
@@ -49,7 +56,7 @@ const filteredInvoices = computed(() => {
   });
 });
 
-const totalAmount = computed(() => {
+const totalAmount = computed<string>(() => {
   // console.log("计算总金额，发票数据:", props.invoices);
   return filteredInvoices.value
     .reduce((sum, invoice) => {
@@ -65,14 +72,14 @@ const totalAmount = computed(() => {
     .toFixed(2);
 });
 
-const invoiceCount = computed(() => filteredInvoices.value.length);
+const invoiceCount = computed<number>(() => filteredInvoices.value.length);
 
-const specialInvoiceCount = computed(
+const specialInvoiceCount = computed<number>(
   () =>
     filteredInvoices.value.filter((i) => ["01", "10"].includes(i.type)).length
 );
 
-const normalInvoiceCount = computed(
+const normalInvoiceCount = computed<number>(
   () => filteredInvoices.value.filter((i) => i.type === "04").length
 );
 </script>

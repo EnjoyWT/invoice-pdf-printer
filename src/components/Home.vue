@@ -76,7 +76,7 @@
       :show="isProcessing"
       :percentage="progress"
       :hasError="!!error"
-      :errorMessage="error"
+      :errorMessage="error || ''"
       @close="error = null"
     />
 
@@ -153,32 +153,55 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import jsQR from "jsqr";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFPage } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, type Ref } from "vue";
 import LoadingView from "./LoadingView.vue";
 import InvoiceStats from "./InvoiceStats.vue";
 import ProcessingToast from "./ProcessingToast.vue";
-import { getInvoiceType } from "../utils/invoiceUtils.js"; // 导入公共函数
+import { getInvoiceType } from "../utils/invoiceUtils"; // 导入公共函数
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const selectedFiles = ref([]);
-const pdfSrc = ref(null);
-const isLoading = ref(false);
-const cells = ref([]);
-const isProcessing = ref(false);
-const progress = ref(0);
-const error = ref(null);
+interface InvoiceCell {
+  pageNumber: number;
+  fileName: string;
+  type: string;
+  amount: string;
+  date: string;
+  constNumber?: string;
+  code?: string;
+  number?: string;
+  checkCode?: string;
+}
 
-const headerRef = ref(null);
-const pdfAreaHeight = ref(0);
-let ro = null;
+interface PdfPageData {
+  doc: PDFDocument;
+  page: PDFPage;
+  pdfjsPage: pdfjs.PDFPageProxy; // Add this line
+  width: number;
+  height: number;
+  sourceFile: string;
+  pageNumber: number;
+}
+
+const selectedFiles: Ref<File[]> = ref([]);
+const pdfSrc: Ref<string | null> = ref(null);
+const isLoading: Ref<boolean> = ref(false);
+const cells: Ref<InvoiceCell[]> = ref([]);
+const isProcessing: Ref<boolean> = ref(false);
+const progress: Ref<number> = ref(0);
+const error: Ref<string | null> = ref(null);
+
+const headerRef: Ref<HTMLElement | null> = ref(null);
+const pdfAreaHeight: Ref<number> = ref(0);
+let ro: ResizeObserver | null = null;
 
 const OUTER_VERTICAL_PADDING = 48; // py-6 = 1.5rem = 24px × 2
 
-function updatePdfAreaHeight() {
+function updatePdfAreaHeight(): void {
   if (headerRef.value) {
     console.log(headerRef.value);
     const headerHeight = headerRef.value.offsetHeight;
@@ -208,7 +231,7 @@ onUnmounted(() => {
   }
 });
 
-const clear = () => {
+const clear = (): void => {
   selectedFiles.value = [];
   if (pdfSrc.value) {
     URL.revokeObjectURL(pdfSrc.value); // 释放内存
@@ -224,7 +247,7 @@ const A4 = {
 };
 
 // 删除发票
-const removeCell = (index) => {
+const removeCell = (index: number): void => {
   cells.value.splice(index, 1);
   selectedFiles.value.splice(index, 1);
   isLoading.value = true;
@@ -235,16 +258,16 @@ const removeCell = (index) => {
 };
 
 // 处理拖放文件
-const handleDrop = (event) => {
+const handleDrop = (event: DragEvent): void => {
   event.preventDefault();
-  const files = Array.from(event.dataTransfer.files);
+  const files = Array.from(event.dataTransfer?.files || []);
   selectedFiles.value.push(...files);
   isLoading.value = true;
   mergePDFs().finally(() => (isLoading.value = false));
 };
 
 // 合并 PDF
-const mergePDFs = async () => {
+const mergePDFs = async (): Promise<void> => {
   try {
     const files = selectedFiles.value;
     if (!files?.length) {
@@ -256,7 +279,7 @@ const mergePDFs = async () => {
     progress.value = 0;
 
     const batchSize = 5; // 分批处理，减少内存峰值
-    const allPages = [];
+    const allPages: PdfPageData[] = [];
     for (let i = 0; i < files.length; i += batchSize) {
       const batchFiles = files.slice(i, i + batchSize);
       const batchPages = await processFiles(batchFiles);
@@ -276,7 +299,7 @@ const mergePDFs = async () => {
     displayPDF(pdfBlob);
 
     allPages.length = 0; // 清理页面数据
-  } catch (err) {
+  } catch (err: any) {
     handleError(err);
   } finally {
     setTimeout(() => (isProcessing.value = false), 500);
@@ -284,30 +307,32 @@ const mergePDFs = async () => {
 };
 
 // 处理错误
-function handleError(err) {
-  const errorMessages = {
+function handleError(err: { code?: string; message: string }): void {
+  const errorMessages: { [key: string]: string } = {
     NO_FILES: "请选择PDF文件",
     INVALID_FORMAT: "文件格式不正确",
     QR_CODE_ERROR: "二维码识别失败",
   };
-  error.value = errorMessages[err.code] || "处理过程中发生错误";
+  error.value = errorMessages[err.code || ""] || "处理过程中发生错误";
   console.error("PDF处理错误:", err);
 }
 
 // 处理文件并提取页面
-async function processFiles(files) {
-  const allPages = [];
+async function processFiles(files: File[]): Promise<PdfPageData[]> {
+  const allPages: PdfPageData[] = [];
   for (const file of files) {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer, {
       ignoreEncryption: true,
     });
+    const pdfjsDocument = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
     const pageCount = pdfDoc.getPageCount();
     for (let j = 0; j < pageCount; j++) {
       const page = pdfDoc.getPage(j);
+      const pdfjsPage = await pdfjsDocument.getPage(j + 1); // pdf.js pages are 1-indexed
       const cropBox = page.getCropBox();
-      let width, height, processedPage;
+      let width: number, height: number, processedPage: PDFPage;
 
       if (cropBox?.width > 0 && cropBox?.height > 0) {
         const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [j]);
@@ -339,6 +364,7 @@ async function processFiles(files) {
       allPages.push({
         doc: pdfDoc,
         page: processedPage,
+        pdfjsPage, // Store the pdfjsPage here
         width,
         height,
         sourceFile: file.name,
@@ -351,7 +377,7 @@ async function processFiles(files) {
 }
 
 // 创建合并后的 PDF
-async function createMergedPDF(allPages) {
+async function createMergedPDF(allPages: PdfPageData[]): Promise<PDFDocument> {
   const outputPdfDoc = await PDFDocument.create();
   const pagesPerSheet = 2;
   const newPageCount = Math.ceil(allPages.length / pagesPerSheet);
@@ -390,14 +416,19 @@ async function createMergedPDF(allPages) {
 }
 
 // 计算缩放比例
-function calculateScale(srcWidth, srcHeight, targetWidth, targetHeight) {
+function calculateScale(
+  srcWidth: number,
+  srcHeight: number,
+  targetWidth: number,
+  targetHeight: number
+): number {
   const scaleX = (targetWidth * defaultScale) / srcWidth;
   const scaleY = (targetHeight * defaultScale) / srcHeight;
   return Math.min(scaleX, scaleY);
 }
 
 // 显示 PDF
-const displayPDF = (file) => {
+const displayPDF = (file: Blob): void => {
   if (file.type === "application/pdf") {
     if (pdfSrc.value) URL.revokeObjectURL(pdfSrc.value); // 释放旧 URL
     pdfSrc.value = URL.createObjectURL(file);
@@ -407,9 +438,9 @@ const displayPDF = (file) => {
 };
 
 // 处理文件选择
-const handleFileChange = async (event) => {
+const handleFileChange = async (event: Event): Promise<void> => {
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-  const files = Array.from(event.target.files).filter((file) => {
+  const files = Array.from((event.target as HTMLInputElement).files || []).filter((file) => {
     if (file.size > MAX_FILE_SIZE) {
       alert(`文件 ${file.name} 超过10MB限制`);
       return false;
@@ -427,27 +458,29 @@ const handleFileChange = async (event) => {
   isLoading.value = true;
   await mergePDFs();
   isLoading.value = false;
-  event.target.value = null; // 清空 input
+  (event.target as HTMLInputElement).value = ""; // 清空 input
 };
 
 // 处理二维码
-async function processQRCodeFromPages(allPages) {
-  const cellData = [];
+async function processQRCodeFromPages(allPages: PdfPageData[]): Promise<void> {
+  const cellData: InvoiceCell[] = [];
   const canvas = document.createElement("canvas"); // 复用 canvas
   const context = canvas.getContext("2d");
 
+  if (!context) {
+    console.error("Failed to get 2D rendering context for canvas.");
+    return;
+  }
+
   for (let i = 0; i < allPages.length; i++) {
-    const { doc, pageNumber, sourceFile } = allPages[i];
+    const { pdfjsPage, pageNumber, sourceFile } = allPages[i];
     try {
-      const pdfData = new Uint8Array(await doc.save());
-      const pdfDocument = await pdfjs.getDocument({ data: pdfData }).promise;
-      const pdfPage = await pdfDocument.getPage(pageNumber);
-      const viewport = pdfPage.getViewport({ scale: 4 });
+      const viewport = pdfjsPage.getViewport({ scale: 4 });
 
       canvas.width = viewport.width;
       canvas.height = viewport.height;
 
-      await pdfPage.render({ canvasContext: context, viewport }).promise;
+      await pdfjsPage.render({ canvasContext: context, viewport }).promise;
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
       const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
@@ -456,8 +489,6 @@ async function processQRCodeFromPages(allPages) {
         : await parseQRCode(pageNumber, null);
       res.fileName = sourceFile;
       cellData.push(res);
-
-      pdfDocument.destroy(); // 清理 pdf.js 内存
     } catch (error) {
       console.error(`处理页面 ${pageNumber} 时发生错误:`, error);
       cellData.push({
@@ -476,10 +507,13 @@ async function processQRCodeFromPages(allPages) {
 }
 
 // 解析二维码数据
-async function parseQRCode(pageNumber, qrCodeData) {
+async function parseQRCode(
+  pageNumber: number,
+  qrCodeData: string | null
+): Promise<InvoiceCell> {
   console.log(qrCodeData);
   if (!qrCodeData) {
-    return { pageNumber, type: "", amount: "0", date: "" };
+    return { pageNumber, type: "", amount: "0", date: "", fileName: "" };
   }
 
   const [constNumber, type, code, number, amount, date, checkCode] =
@@ -497,6 +531,7 @@ async function parseQRCode(pageNumber, qrCodeData) {
     amount,
     date: formattedDate,
     checkCode,
+    fileName: "", // This will be filled later in processQRCodeFromPages
   };
 }
 </script>

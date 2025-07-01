@@ -82,7 +82,7 @@
   </Transition>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from "vue";
 
 const props = defineProps({
@@ -104,8 +104,8 @@ const props = defineProps({
   },
 });
 
-const statusText = computed(() => {
-  const percentage = props.percentage;
+const statusText = computed<string>(() => {
+  const percentage: number = props.percentage;
   if (percentage < 30) {
     return "正在读取文件...";
   } else if (percentage < 80) {

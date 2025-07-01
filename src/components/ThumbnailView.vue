@@ -7,7 +7,7 @@
         class="thumbnail-item"
       >
         <div class="thumbnail-preview">
-          <canvas :ref="(el) => (canvasRefs[index] = el)"></canvas>
+          <canvas :ref="(el) => (canvasRefs[index] = el as HTMLCanvasElement | null)"></canvas>
         </div>
         <div class="thumbnail-info">
           <p class="thumbnail-name">{{ file.name }}</p>
@@ -32,20 +32,20 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, watch } from "vue";
+<script setup lang="ts">
+import { ref, onMounted, watch, type Ref } from "vue";
 import * as pdfjs from "pdfjs-dist";
 
 const props = defineProps({
   files: {
-    type: Array,
+    type: Array as () => File[],
     required: true,
   },
 });
 
-const canvasRefs = ref([]);
+const canvasRefs: Ref<(HTMLCanvasElement | null)[]> = ref([]);
 
-const renderThumbnail = async (file, canvas) => {
+const renderThumbnail = async (file: File, canvas: HTMLCanvasElement): Promise<void> => {
   if (!canvas) return;
 
   const arrayBuffer = await file.arrayBuffer();
@@ -57,14 +57,14 @@ const renderThumbnail = async (file, canvas) => {
   canvas.height = viewport.height;
 
   await page.render({
-    canvasContext: canvas.getContext("2d"),
+    canvasContext: canvas.getContext("2d") as CanvasRenderingContext2D,
     viewport,
   }).promise;
 };
 
 watch(
   () => props.files,
-  async (newFiles) => {
+  async (newFiles: File[]) => {
     await Promise.all(
       newFiles.map((file, index) => {
         if (canvasRefs.value[index]) {

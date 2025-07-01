@@ -23,7 +23,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { ref, onMounted } from "vue";
 import Home from "./components/Home.vue";
 
@@ -34,11 +34,11 @@ export default {
   },
   setup() {
     // 检测是否为移动设备
-    const isMobile = ref(false);
+    const isMobile = ref<boolean>(false);
 
     onMounted(() => {
       // 简单的移动设备检测函数
-      const checkMobile = () => {
+      const checkMobile = (): boolean => {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
           navigator.userAgent
         );

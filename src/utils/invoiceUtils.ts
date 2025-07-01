@@ -1,5 +1,5 @@
-// src/utils/invoiceUtils.js
-export const getInvoiceType = (type) => {
+// src/utils/invoiceUtils.ts
+export const getInvoiceType = (type: string): string => {
   console.log(type);
   switch (type) {
     case "10":
