@@ -40,3 +40,28 @@ export interface MergePDFResult {
   invoiceData: InvoiceCell[];
   totalPages: number;
 }
+
+// 新增的布局相关类型
+export interface PagePosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  scale: number;
+}
+
+export interface PageLayout {
+  positions: PagePosition[];
+}
+
+export interface LayoutResult {
+  layouts: PageLayout[];
+}
+
+export interface ScaleResult {
+  scale: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
