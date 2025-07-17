@@ -2,7 +2,7 @@
   <Transition name="toast">
     <div
       v-if="show"
-      class="fixed top-4 right-4 max-w-sm bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300"
+      class="fixed top-4 right-4 max-w-sm bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 z-[10000]"
     >
       <div class="p-4">
         <div class="flex items-center">
@@ -133,4 +133,4 @@ defineEmits(["close"]);
   opacity: 0;
   transform: translateX(30px);
 }
-</style> 
+</style>

@@ -1,0 +1,42 @@
+// 发票相关类型定义
+export interface InvoiceCell {
+  pageNumber: number;
+  fileName: string;
+  type: string;
+  amount: string;
+  date: string;
+  constNumber?: string;
+  code?: string;
+  number?: string;
+  checkCode?: string;
+}
+
+export interface PdfPageData {
+  doc: import('pdf-lib').PDFDocument;
+  page: import('pdf-lib').PDFPage;
+  pdfjsPage: import('pdfjs-dist').PDFPageProxy;
+  width: number;
+  height: number;
+  sourceFile: string;
+  pageNumber: number;
+}
+
+export interface PageSize {
+  width: number;
+  height: number;
+}
+
+export interface MergePDFOptions {
+  files: File[];
+  pagesPerSheet?: number;
+  targetPageSize?: PageSize;
+  scale?: number;
+  onProgress?: (progress: number) => void;
+  onError?: (error: Error) => void;
+}
+
+export interface MergePDFResult {
+  pdfBlob: Blob;
+  invoiceData: InvoiceCell[];
+  totalPages: number;
+}

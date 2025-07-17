@@ -25,7 +25,7 @@
 
 <script lang="ts">
 import { ref, onMounted } from "vue";
-import Home from "./components/Home.vue";
+import Home from "./views/Home.vue";
 
 export default {
   name: "App",

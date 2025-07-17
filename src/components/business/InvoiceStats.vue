@@ -23,19 +23,8 @@
 
 <script setup lang="ts">
 import { ref, computed, type Ref } from "vue";
-import { getInvoiceType } from "../utils/invoiceUtils"; // 导入公共函数
-
-interface InvoiceCell {
-  pageNumber: number;
-  fileName: string;
-  type: string;
-  amount: string;
-  date: string;
-  constNumber?: string;
-  code?: string;
-  number?: string;
-  checkCode?: string;
-}
+import { getInvoiceType } from "../../utils/invoiceUtils";
+import type { InvoiceCell } from "../../types/invoice";
 
 const props = defineProps<{ invoices: InvoiceCell[] }>();
 

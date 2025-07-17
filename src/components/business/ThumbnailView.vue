@@ -36,12 +36,9 @@
 import { ref, onMounted, watch, type Ref } from "vue";
 import * as pdfjs from "pdfjs-dist";
 
-const props = defineProps({
-  files: {
-    type: Array as () => File[],
-    required: true,
-  },
-});
+const props = defineProps<{
+  files: File[];
+}>();
 
 const canvasRefs: Ref<(HTMLCanvasElement | null)[]> = ref([]);
 
