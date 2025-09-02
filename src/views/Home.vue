@@ -4,6 +4,10 @@
   >
     <!-- Header 区域和统计信息 -->
     <div ref="headerRef" class="w-full mb-10 px-4">
+    <!-- 固定标签 - 显示在页面左上角 -->
+    <div v-if="showStats" class="fixed top-0 left-0 z-50  text-gray-300 px-3 py-2 font-medium">
+      累计处理 {{ formattedTotalCount }} 张
+    </div>
       <!-- 按钮组居中显示 -->
       <div class="flex justify-between items-center px-4">
         <!-- 左侧按钮组 -->
@@ -155,7 +159,7 @@
 
 <script setup lang="ts">
 import * as pdfjs from "pdfjs-dist";
-import { ref, onMounted, onUnmounted, nextTick, type Ref } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, computed, type Ref } from "vue";
 import LoadingView from "../components/ui/LoadingView.vue";
 import InvoiceStats from "../components/business/InvoiceStats.vue";
 import ProcessingToast from "../components/ui/ProcessingToast.vue";
@@ -172,6 +176,15 @@ const cells: Ref<InvoiceCell[]> = ref([]);
 const isProcessing: Ref<boolean> = ref(false);
 const progress: Ref<number> = ref(0);
 const error: Ref<string | null> = ref(null);
+
+// 统计相关数据
+const totalInvoiceCount: Ref<number> = ref(1000000);
+const showStats: Ref<boolean> = ref(false);
+
+// 格式化数字显示，添加千分位分隔符
+const formattedTotalCount = computed(() => {
+  return totalInvoiceCount.value.toLocaleString('zh-CN');
+});
 
 const headerRef: Ref<HTMLElement | null> = ref(null);
 const pdfAreaHeight: Ref<number> = ref(0);
@@ -199,6 +212,9 @@ onMounted(() => {
       ro.observe(headerRef.value);
     }
   });
+  
+  // 页面初始化时查询发票处理数量
+  fetchInvoiceCount();
 });
 
 onUnmounted(() => {
@@ -265,6 +281,12 @@ const handleMergePDFs = async (): Promise<void> => {
       `PDF size: ${(result.pdfBlob.size / (1024 * 1024)).toFixed(2)} MB`
     );
     displayPDF(result.pdfBlob);
+    
+    // 发票处理完成后，更新统计数量
+    const processedCount = result.invoiceData.length;
+    if (processedCount > 0) {
+      await updateInvoiceCount(processedCount);
+    }
   } catch (err: any) {
     error.value = err.message || "处理过程中发生错误";
     console.error("PDF处理错误:", err);
@@ -280,6 +302,50 @@ const displayPDF = (file: Blob): void => {
     pdfSrc.value = URL.createObjectURL(file);
   } else {
     alert("请选择 PDF 文件");
+  }
+};
+
+// 统计相关API方法
+const API_BASE_URL = 'https://auth.yoloxy.com'; // 根据实际部署地址调整
+
+// 查询发票处理数量
+const fetchInvoiceCount = async (): Promise<void> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stats/invoice-count`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        totalInvoiceCount.value = data.data.totalCount;
+        showStats.value = true;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch invoice count:', error);
+    showStats.value = false;
+  }
+};
+
+// 更新发票处理数量
+const updateInvoiceCount = async (count: number): Promise<void> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stats/invoice-count`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ count }),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        totalInvoiceCount.value = data.data.totalCount;
+        showStats.value = true;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to update invoice count:', error);
+    showStats.value = false;
   }
 };
 
