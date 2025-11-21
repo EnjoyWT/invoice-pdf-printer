@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage } from "pdf-lib";
+import { PDFDocument, PDFPage, rgb } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
 import jsQR from "jsqr";
 import type {
@@ -577,6 +577,20 @@ export async function createMergedDocument(
         // 跳过问题页面,继续处理下一页
         continue;
       }
+    }
+
+    // 在两个发票之间绘制虚线分隔线
+    if (pagesPerSheet === 2 && layout.positions.length === 2) {
+      const middleY = targetPageSize.height / 2;
+      const margin = 10; // 左右边距
+
+      newPage.drawLine({
+        start: { x: margin, y: middleY },
+        end: { x: targetPageSize.width - margin, y: middleY },
+        thickness: 0.5,
+        color: rgb(0.7, 0.7, 0.7),
+        dashArray: [3, 3], // 虚线样式: 3个单位实线, 3个单位空白
+      });
     }
   }
 
