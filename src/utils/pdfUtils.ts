@@ -67,7 +67,9 @@ export async function mergePDFs(
     onProgress?.(100);
 
     const pdfBytes = await mergedPdf.save({ updateFieldAppearances: false });
-    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+    const pdfBlob = new Blob([new Uint8Array(pdfBytes)], {
+      type: "application/pdf",
+    });
 
     return {
       pdfBlob,
@@ -154,64 +156,113 @@ async function processFiles(files: File[]): Promise<PdfPageData[]> {
 }
 
 /**
- * 提取发票信息 - 增强版，支持多种信息提取方式
+ * 提取发票信息 - 优化版,使用并发处理
  */
 async function extractInvoiceData(
   allPages: PdfPageData[]
 ): Promise<InvoiceCell[]> {
   const cellData: InvoiceCell[] = [];
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
 
-  if (!context) {
-    throw new Error("无法获取Canvas 2D渲染上下文");
+  // 使用 Promise.all 批量并发处理
+  const batchSize = 6; // 同时处理 6 个页面
+
+  for (let i = 0; i < allPages.length; i += batchSize) {
+    const batch = allPages.slice(i, i + batchSize);
+
+    const batchResults = await Promise.all(
+      batch.map(async (pageData) => {
+        return await extractSinglePageData(pageData);
+      })
+    );
+
+    cellData.push(...batchResults);
   }
-
-  for (let i = 0; i < allPages.length; i++) {
-    const { pdfjsPage, pageNumber, sourceFile } = allPages[i];
-    try {
-      // 提高渲染质量以获得更好的文本识别效果
-      const viewport = pdfjsPage.getViewport({ scale: 4 });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      await pdfjsPage.render({ canvasContext: context, viewport }).promise;
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-      // 尝试多种方式提取发票信息
-      let invoiceInfo: InvoiceCell;
-
-      // 1. 首先尝试二维码识别
-      const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
-      if (qrCode?.data) {
-        invoiceInfo = parseQRCode(pageNumber, qrCode.data);
-      } else {
-        // 2. 如果没有二维码，尝试文本提取
-        invoiceInfo = await extractInvoiceFromText(pdfjsPage, pageNumber);
-      }
-
-      // 3. 增强信息提取 - 获取更多发票详情
-      const enhancedInfo = await enhanceInvoiceInfo(pdfjsPage, invoiceInfo);
-      enhancedInfo.fileName = sourceFile;
-
-      cellData.push(enhancedInfo);
-    } catch (error) {
-      console.error(`处理页面 ${pageNumber} 时发生错误:`, error);
-      cellData.push({
-        pageNumber,
-        fileName: sourceFile,
-        type: "",
-        amount: "0",
-        date: "",
-      });
-    }
-  }
-
-  // 清理canvas
-  canvas.width = 0;
-  canvas.height = 0;
 
   return cellData;
+}
+
+/**
+ * 提取单个页面的发票信息
+ */
+async function extractSinglePageData(
+  pageData: PdfPageData
+): Promise<InvoiceCell> {
+  const { pdfjsPage, pageNumber, sourceFile } = pageData;
+
+  try {
+    // 优化 1: 优先使用文本提取(比图像处理快 5-10 倍)
+    let invoiceInfo = await extractInvoiceFromText(pdfjsPage, pageNumber);
+
+    // 如果文本提取成功且有金额,直接返回
+    if (invoiceInfo.amount && invoiceInfo.amount !== "0") {
+      invoiceInfo.fileName = sourceFile;
+      return invoiceInfo;
+    }
+
+    // 优化 2: 文本提取失败时,尝试二维码识别
+    // 降低渲染分辨率 (scale: 4 → 2.5)
+    const viewport = pdfjsPage.getViewport({ scale: 2.5 });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("无法获取Canvas 2D渲染上下文");
+    }
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await pdfjsPage.render({ canvasContext: context, viewport }).promise;
+
+    // 优化 3: 智能扫描区域 - 二维码通常在左上角
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const scanWidth = Math.floor(canvas.width * 0.35);
+    const scanHeight = Math.floor(canvas.height * 0.35);
+
+    // 提取左上角区域
+    const regionData = new Uint8ClampedArray(scanWidth * scanHeight * 4);
+    for (let y = 0; y < scanHeight; y++) {
+      const sourceStart = y * canvas.width * 4;
+      const targetStart = y * scanWidth * 4;
+      regionData.set(
+        imageData.data.subarray(sourceStart, sourceStart + scanWidth * 4),
+        targetStart
+      );
+    }
+
+    // 二维码识别
+    const qrCode = jsQR(regionData, scanWidth, scanHeight, {
+      inversionAttempts: "dontInvert",
+    });
+
+    if (qrCode?.data) {
+      invoiceInfo = parseQRCode(pageNumber, qrCode.data);
+    }
+
+    // 优化 4: 只在必要时增强信息
+    if (
+      !invoiceInfo.amount ||
+      invoiceInfo.amount === "0" ||
+      !invoiceInfo.date
+    ) {
+      const enhancedInfo = await enhanceInvoiceInfo(pdfjsPage, invoiceInfo);
+      enhancedInfo.fileName = sourceFile;
+      return enhancedInfo;
+    }
+
+    invoiceInfo.fileName = sourceFile;
+    return invoiceInfo;
+  } catch (error) {
+    console.error(`处理页面 ${pageNumber} 时发生错误:`, error);
+    return {
+      pageNumber,
+      fileName: sourceFile,
+      type: "",
+      amount: "0",
+      date: "",
+    };
+  }
 }
 
 /**

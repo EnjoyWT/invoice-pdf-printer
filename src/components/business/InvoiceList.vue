@@ -51,7 +51,7 @@
             {{ getInvoiceType(item.type) }}
           </span>
           <span class="text-sm font-bold text-blue-600">
-            ¥{{ item.amount }}
+            ¥{{ getDisplayAmount(item) }}
           </span>
         </div>
       </div>
@@ -70,6 +70,25 @@ defineProps<{
 defineEmits<{
   (e: "remove", index: number): void;
 }>();
+
+/**
+ * 计算发票的显示金额
+ * 对于类型为 "01", "04", "10" 的发票,自动加上 3% 税额
+ */
+const getDisplayAmount = (invoice: InvoiceCell): string => {
+  const amount = Number(invoice.amount) || 0;
+  const taxRate = 0.03;
+
+  // "01", "04", "10" 不包含税额,需要加上税额
+  const finalAmount = ["01", "04", "10"].includes(invoice.type)
+    ? amount * (1 + taxRate)
+    : amount;
+
+  return finalAmount.toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 </script>
 
 <style scoped>
