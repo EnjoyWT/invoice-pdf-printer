@@ -4,7 +4,7 @@
 
 ### 示意图
 
-<img src="https://github.com/EnjoyWT/invoice-pdf-printer/blob/main/public/0.2.0.png" width="889" height="448">
+<img src="https://github.com/EnjoyWT/invoice-pdf-printer/blob/main/public/0.5.0.png" width="889" height="448">
 
 ### 部署到Vercel
 
@@ -33,7 +33,7 @@
 - [x] 13. **多格式兼容** - 支持多种日期格式和发票类型识别
 
 > 📋 日志更新规则：[UPDATE_LOG_RULE.md](./UPDATE_LOG_RULE.md)  
-> 📋 查看完整更新记录：[UPDATE_LOG.md](./UPDATE_LOG.md)  
+> 📋 查看完整更新记录：[UPDATE_LOG.md](./UPDATE_LOG.md)
 
 ### TODO
 
