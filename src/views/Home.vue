@@ -1,80 +1,103 @@
 <template>
-  <div
-    class="flex flex-col min-h-screen w-full px-4 py-6 items-center justify-center"
-  >
-    <!-- Header 区域和统计信息 -->
-    <div ref="headerRef" class="w-full mb-10 px-4">
-    <!-- 固定标签 - 显示在页面左上角 -->
-    <div v-if="showStats" class="fixed top-0 left-0 z-50  text-gray-300 px-3 py-2 font-medium">
-      累计处理 {{ formattedTotalCount }} 张
-    </div>
-      <!-- 按钮组居中显示 -->
-      <div class="flex justify-between items-center px-4">
-        <!-- 左侧按钮组 -->
-        <div
-          class="flex items-center space-x-4"
-          :class="
-            cells.length > 0 ? 'w-6/12 justify-end' : 'w-full justify-center'
-          "
-        >
-          <div class="flex items-center space-x-4">
-            <label
-              for="fileInput"
-              class="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
+  <div class="flex flex-col h-screen w-full bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <header
+      ref="headerRef"
+      class="w-full px-4 md:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-none"
+    >
+      <div
+        class="max-w-7xl mx-auto flex justify-between items-center h-auto md:h-12 relative"
+      >
+        <!-- 左侧：Logo/标题和累计数 -->
+        <div class="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
+          <div class="flex flex-col">
+            <h1
+              class="text-base md:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>选择发票</span>
-            </label>
-            <input
-              id="fileInput"
-              type="file"
-              class="hidden"
-              multiple
-              @change="handleFileChange"
-              accept=".pdf"
-            />
-            <button
-              class="px-6 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-              @click="clear"
+              发票助手
+            </h1>
+            <span
+              v-if="showStats"
+              class="text-[10px] text-gray-500 font-medium leading-none mt-0.5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>清空</span>
-            </button>
+              累计 {{ formattedTotalCount }} 张
+            </span>
           </div>
         </div>
 
-        <!-- 右侧统计信息 -->
-        <!-- <div v-if="cells.length > 0" class="w-4/12 float-left">
-          <InvoiceStats :invoices="cells" />
-        </div> -->
-        <!-- 右侧统计信息 -->
-        <div v-if="cells.length > 0" class="absolute right-4 top-2">
-          <InvoiceStats :invoices="cells" />
+        <!-- 中间：操作按钮 -->
+        <div
+          class="flex items-center space-x-2 md:space-x-3 flex-shrink-0 ml-auto md:ml-0 md:absolute md:left-1/2 md:-translate-x-1/2"
+        >
+          <label
+            for="fileInput"
+            class="group relative px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center space-x-1 md:space-x-2 overflow-hidden whitespace-nowrap"
+          >
+            <div
+              class="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"
+            ></div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 relative z-10"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span class="text-xs md:text-sm font-medium relative z-10">{{
+              cells.length > 0 ? "继续添加" : "选择发票"
+            }}</span>
+          </label>
+          <input
+            id="fileInput"
+            type="file"
+            class="hidden"
+            multiple
+            @change="handleFileChange"
+            accept=".pdf"
+          />
+
+          <button
+            class="px-3 py-1.5 md:px-4 md:py-2 bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 flex items-center space-x-1 md:space-x-2 whitespace-nowrap"
+            @click="clear"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span class="text-xs md:text-sm font-medium">清空</span>
+          </button>
+        </div>
+
+        <!-- 右侧：统计信息 (移动端隐藏，空间不足) -->
+        <div class="hidden md:flex items-center justify-end min-w-[200px]">
+          <Transition
+            enter-active-class="transition ease-out duration-200"
+            enter-from-class="opacity-0 translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-150"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-1"
+          >
+            <div v-if="cells.length > 0">
+              <InvoiceStats :invoices="cells" />
+            </div>
+          </Transition>
         </div>
       </div>
-    </div>
+    </header>
     <!-- 处理进度提示 -->
     <ProcessingToast
       :show="isProcessing"
@@ -84,85 +107,98 @@
       @close="error = null"
     />
 
+    <!-- 主体内容区域 -->
     <div
-      v-if="pdfSrc"
-      class="w-full flex items-center justify-center"
-      :style="{ height: pdfAreaHeight + 'px' }"
+      class="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6 overflow-hidden flex flex-col min-h-0 mb-16 md:mb-0"
     >
-      <div class="w-9/12 h-full p-4">
-        <iframe class="w-full h-full" :src="pdfSrc" frameborder="0"></iframe>
-      </div>
-      <div class="w-3/12 ml-4 h-full p-4">
-        <!-- 发票列表 -->
+      <div
+        v-if="pdfSrc"
+        class="flex-1 w-full flex flex-col md:flex-row gap-4 md:gap-6 overflow-hidden min-h-0"
+      >
+        <!-- PDF 预览区域 (仅在 PC 端显示) -->
         <div
-          class="border border-dashed border-gray-400 rounded-lg px-4 py-4 overflow-y-auto h-full"
+          class="hidden md:block flex-1 h-full bg-gray-100 rounded-2xl overflow-hidden shadow-inner border border-gray-200"
         >
-          <TransitionGroup name="cell-list" tag="div" class="space-y-4 pb-4">
-            <div
-              v-for="(item, index) in cells"
-              :key="item.pageNumber"
-              class="relative cell-item p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-md transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg border border-gray-200"
-            >
-              <button
-                class="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-full hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                @click="removeCell(index)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </button>
-              <p class="text-gray-700 font-semibold text-left truncate mb-2">
-                序号: {{ index + 1 }}
-              </p>
-              <p class="text-gray-500 text-sm text-left truncate mb-1">
-                类型: {{ getInvoiceType(item.type) }}
-              </p>
-              <p class="text-blue-600 font-semibold text-left truncate mb-1">
-                金额: {{ item.amount }}
-                {{ item.type === "10" ? "(不含税)" : "(含税)" }}
-              </p>
-              <p class="text-gray-500 text-sm text-left truncate mb-1">
-                开票日期: {{ item.date }}
-              </p>
-              <p class="text-gray-500 text-[12px] text-left mb-1 break-words">
-                {{ item.fileName }}
-              </p>
-            </div>
-          </TransitionGroup>
+          <iframe class="w-full h-full" :src="pdfSrc" frameborder="0"></iframe>
+        </div>
+
+        <!-- 发票列表区域 -->
+        <div
+          class="w-full md:w-80 h-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+        >
+          <div
+            class="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-none"
+          >
+            <h3 class="font-semibold text-gray-700 text-sm">发票明细</h3>
+          </div>
+
+          <InvoiceList :invoices="cells" @remove="removeCell" />
         </div>
       </div>
-    </div>
 
-    <!-- 空状态区域 -->
-    <div
-      v-else
-      class="border border-dashed border-gray-400 rounded-lg px-4 py-8 text-center w-8/12 h-1/2"
-      style="min-height: calc(100vh - 12rem)"
-      @dragover.prevent
-      @drop="handleDrop"
-    >
-      <p class="text-gray-600">将PDF文件拖拽到这里</p>
-    </div>
+      <!-- 空状态区域 -->
+      <div
+        v-else
+        class="flex-1 w-full flex items-center justify-center"
+        @dragover.prevent
+        @drop="handleDrop"
+      >
+        <label
+          for="fileInput"
+          class="w-full max-w-2xl h-64 md:h-96 border-2 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center bg-gray-50/50 hover:bg-blue-50/30 hover:border-blue-400 transition-all duration-300 group cursor-pointer mx-4 md:mx-0"
+        >
+          <div
+            class="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8 md:h-10 md:w-10 text-gray-400 group-hover:text-blue-500 transition-colors duration-300"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          </div>
+          <h3 class="text-lg md:text-xl font-semibold text-gray-700 mb-2">
+            <span class="md:hidden">点击上传 PDF 文件</span>
+            <span class="hidden md:inline">点击或拖拽 PDF 文件</span>
+          </h3>
+          <p class="text-gray-500 text-xs md:text-sm text-center px-4">
+            支持多个文件同时上传，自动合并处理
+          </p>
+        </label>
+      </div>
 
-    <LoadingView :isLoading="isLoading" :hasDetailedProgress="isProcessing" />
+      <!-- 移动端底部操作栏 -->
+      <div
+        v-if="pdfSrc"
+        class="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50"
+      >
+        <button
+          @click="openPdfPreview"
+          class="w-full py-3 bg-blue-600 text-white rounded-xl font-medium shadow-md active:scale-[0.98] transition-transform"
+        >
+          预览合并结果
+        </button>
+      </div>
+      <LoadingView :isLoading="isLoading" :hasDetailedProgress="isProcessing" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import * as pdfjs from "pdfjs-dist";
-import { ref, onMounted, onUnmounted, nextTick, computed, type Ref } from "vue";
+import { ref, onMounted, computed, type Ref } from "vue";
 import LoadingView from "../components/ui/LoadingView.vue";
 import InvoiceStats from "../components/business/InvoiceStats.vue";
 import ProcessingToast from "../components/ui/ProcessingToast.vue";
+import InvoiceList from "../components/business/InvoiceList.vue";
 import { getInvoiceType } from "../utils/invoiceUtils";
 import { mergePDFs } from "../utils/pdfUtils";
 import type { InvoiceCell } from "../types/invoice";
@@ -183,46 +219,14 @@ const showStats: Ref<boolean> = ref(false);
 
 // 格式化数字显示，添加千分位分隔符
 const formattedTotalCount = computed(() => {
-  return totalInvoiceCount.value.toLocaleString('zh-CN');
+  return totalInvoiceCount.value.toLocaleString("zh-CN");
 });
 
 const headerRef: Ref<HTMLElement | null> = ref(null);
-const pdfAreaHeight: Ref<number> = ref(0);
-let ro: ResizeObserver | null = null;
-
-const OUTER_VERTICAL_PADDING = 48; // py-6 = 1.5rem = 24px × 2
-
-function updatePdfAreaHeight(): void {
-  if (headerRef.value) {
-    console.log(headerRef.value);
-    const headerHeight = headerRef.value.offsetHeight;
-    pdfAreaHeight.value =
-      window.innerHeight - headerHeight - OUTER_VERTICAL_PADDING;
-  }
-}
 
 onMounted(() => {
-  nextTick(() => {
-    updatePdfAreaHeight();
-    window.addEventListener("resize", updatePdfAreaHeight);
-
-    // 监听header高度变化
-    ro = new ResizeObserver(updatePdfAreaHeight);
-    if (headerRef.value) {
-      ro.observe(headerRef.value);
-    }
-  });
-  
   // 页面初始化时查询发票处理数量
   fetchInvoiceCount();
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", updatePdfAreaHeight);
-  if (ro && headerRef.value) {
-    ro.unobserve(headerRef.value);
-    ro.disconnect();
-  }
 });
 
 const clear = (): void => {
@@ -235,13 +239,19 @@ const clear = (): void => {
 };
 
 // 删除发票
+// 删除发票
 const removeCell = (index: number): void => {
   cells.value.splice(index, 1);
   selectedFiles.value.splice(index, 1);
+
+  if (selectedFiles.value.length === 0) {
+    clear();
+    return;
+  }
+
   isLoading.value = true;
   handleMergePDFs().finally(() => {
     isLoading.value = false;
-    if (cells.value.length === 0) clear();
   });
 };
 
@@ -281,7 +291,7 @@ const handleMergePDFs = async (): Promise<void> => {
       `PDF size: ${(result.pdfBlob.size / (1024 * 1024)).toFixed(2)} MB`
     );
     displayPDF(result.pdfBlob);
-    
+
     // 发票处理完成后，更新统计数量
     const processedCount = result.invoiceData.length;
     if (processedCount > 0) {
@@ -306,7 +316,7 @@ const displayPDF = (file: Blob): void => {
 };
 
 // 统计相关API方法
-const API_BASE_URL = 'https://auth.yoloxy.com'; // 根据实际部署地址调整
+const API_BASE_URL = "https://auth.yoloxy.com"; // 根据实际部署地址调整
 
 // 查询发票处理数量
 const fetchInvoiceCount = async (): Promise<void> => {
@@ -320,7 +330,7 @@ const fetchInvoiceCount = async (): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch invoice count:', error);
+    console.error("Failed to fetch invoice count:", error);
     showStats.value = false;
   }
 };
@@ -329,13 +339,13 @@ const fetchInvoiceCount = async (): Promise<void> => {
 const updateInvoiceCount = async (count: number): Promise<void> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/stats/invoice-count`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ count }),
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       if (data.success) {
@@ -344,7 +354,7 @@ const updateInvoiceCount = async (count: number): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Failed to update invoice count:', error);
+    console.error("Failed to update invoice count:", error);
     showStats.value = false;
   }
 };
@@ -360,23 +370,37 @@ const handleFileChange = async (event: Event): Promise<void> => {
   isLoading.value = false;
   (event.target as HTMLInputElement).value = ""; // 清空 input
 };
+function openPdfPreview() {
+  if (pdfSrc.value) {
+    window.open(pdfSrc.value, "_blank");
+  }
+}
 </script>
 <style scoped>
-.cell-item {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 80px;
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #e2e8f0;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #cbd5e1;
 }
 
 /* 删除动画时让元素脱离文档流 */
 .cell-list-leave-active {
   position: absolute; /* 元素脱离文档流 */
-  top: 0; /* 确保动画位置正确 */
-  left: 0;
   width: 100%; /* 保持宽度不变 */
   transition: all 0.5s ease;
+  z-index: 0;
 }
 
 .cell-list-leave-to {
