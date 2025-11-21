@@ -132,7 +132,18 @@
             <h3 class="font-semibold text-gray-700 text-sm">发票明细</h3>
           </div>
 
-          <InvoiceList :invoices="cells" @remove="removeCell" />
+          <!-- 批量操作栏 -->
+          <BatchActionBar
+            :count="pendingDeletions.size"
+            @cancel="cancelDeletions"
+            @confirm="confirmDeletions"
+          />
+
+          <InvoiceList
+            :invoices="cells"
+            :pendingDeletions="pendingDeletions"
+            @toggleDeletion="toggleDeletion"
+          />
         </div>
       </div>
 
@@ -199,11 +210,29 @@ import LoadingView from "../components/ui/LoadingView.vue";
 import InvoiceStats from "../components/business/InvoiceStats.vue";
 import ProcessingToast from "../components/ui/ProcessingToast.vue";
 import InvoiceList from "../components/business/InvoiceList.vue";
+import BatchActionBar from "../components/ui/BatchActionBar.vue";
 import { getInvoiceType } from "../utils/invoiceUtils";
-import { mergePDFs } from "../utils/pdfUtils";
-import type { InvoiceCell } from "../types/invoice";
+import {
+  processFiles,
+  extractInvoiceData,
+  createMergedDocument,
+} from "../utils/pdfUtils";
+import type { InvoiceCell, PdfPageData } from "../types/invoice";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// 数据缓存结构(用于增量处理)
+interface ProcessedData {
+  pages: PdfPageData[];
+  invoices: InvoiceCell[];
+  files: File[];
+}
+
+const processedData: Ref<ProcessedData> = ref({
+  pages: [],
+  invoices: [],
+  files: [],
+});
 
 const selectedFiles: Ref<File[]> = ref([]);
 const pdfSrc: Ref<string | null> = ref(null);
@@ -212,6 +241,9 @@ const cells: Ref<InvoiceCell[]> = ref([]);
 const isProcessing: Ref<boolean> = ref(false);
 const progress: Ref<number> = ref(0);
 const error: Ref<string | null> = ref(null);
+
+// 批量删除状态
+const pendingDeletions: Ref<Set<number>> = ref(new Set());
 
 // 统计相关数据
 const totalInvoiceCount: Ref<number> = ref(1000000);
@@ -231,6 +263,8 @@ onMounted(() => {
 
 const clear = (): void => {
   selectedFiles.value = [];
+  processedData.value = { pages: [], invoices: [], files: [] };
+  pendingDeletions.value.clear();
   if (pdfSrc.value) {
     URL.revokeObjectURL(pdfSrc.value); // 释放内存
   }
@@ -238,21 +272,58 @@ const clear = (): void => {
   cells.value = [];
 };
 
-// 删除发票
-// 删除发票
-const removeCell = (index: number): void => {
-  cells.value.splice(index, 1);
-  selectedFiles.value.splice(index, 1);
-
-  if (selectedFiles.value.length === 0) {
-    clear();
-    return;
+// 标记/取消标记待删除
+const toggleDeletion = (index: number): void => {
+  if (pendingDeletions.value.has(index)) {
+    pendingDeletions.value.delete(index);
+  } else {
+    pendingDeletions.value.add(index);
   }
+};
+
+// 撤销所有待删除标记
+const cancelDeletions = (): void => {
+  pendingDeletions.value.clear();
+};
+
+// 确认删除
+const confirmDeletions = async (): Promise<void> => {
+  if (pendingDeletions.value.size === 0) return;
 
   isLoading.value = true;
-  handleMergePDFs().finally(() => {
+
+  try {
+    // 从文件列表中移除(倒序删除,避免索引错乱)
+    const sortedIndices = Array.from(pendingDeletions.value).sort(
+      (a, b) => b - a
+    );
+    sortedIndices.forEach((index) => {
+      selectedFiles.value.splice(index, 1);
+    });
+
+    // 清空待删除标记
+    pendingDeletions.value.clear();
+
+    // 检查是否全部删除
+    if (selectedFiles.value.length === 0) {
+      clear();
+      return;
+    }
+
+    // 重新处理所有剩余文件
+    await handleMergePDFs();
+  } catch (err: any) {
+    error.value = err.message || "删除过程中发生错误";
+    console.error("删除错误:", err);
+  } finally {
     isLoading.value = false;
-  });
+  }
+};
+
+// 旧的删除逻辑(已废弃,保留用于兼容)
+const removeCell = (index: number): void => {
+  // 现在使用批量删除模式
+  toggleDeletion(index);
 };
 
 // 处理拖放文件
@@ -262,6 +333,11 @@ const handleDrop = (event: DragEvent): void => {
   selectedFiles.value.push(...files);
   isLoading.value = true;
   handleMergePDFs().finally(() => (isLoading.value = false));
+};
+
+// 重新生成 PDF(重新处理所有文件)
+const regeneratePDF = async (): Promise<void> => {
+  await handleMergePDFs();
 };
 
 // 使用新的PDF工具函数处理合并
@@ -276,24 +352,35 @@ const handleMergePDFs = async (): Promise<void> => {
     error.value = null;
     progress.value = 0;
 
-    const result = await mergePDFs({
-      files,
-      onProgress: (progressValue) => {
-        progress.value = progressValue;
-      },
-      onError: (err) => {
-        error.value = err.message;
-      },
+    // 每次都重新处理所有文件(避免 PDF 文档生命周期问题)
+    console.log(`处理 ${files.length} 张发票`);
+
+    const allPages = await processFiles(files);
+    progress.value = 30;
+
+    const invoiceData = await extractInvoiceData(allPages);
+    progress.value = 60;
+
+    // 合并所有页面
+    const mergedPdf = await createMergedDocument(allPages, {
+      pagesPerSheet: 2,
+      targetPageSize: { width: 595.28, height: 841.89 },
+      scale: 0.95,
+    });
+    progress.value = 90;
+
+    const pdfBytes = await mergedPdf.save({ updateFieldAppearances: false });
+    const pdfBlob = new Blob([new Uint8Array(pdfBytes)], {
+      type: "application/pdf",
     });
 
-    cells.value = result.invoiceData;
-    console.log(
-      `PDF size: ${(result.pdfBlob.size / (1024 * 1024)).toFixed(2)} MB`
-    );
-    displayPDF(result.pdfBlob);
+    cells.value = invoiceData;
+    console.log(`PDF size: ${(pdfBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+    displayPDF(pdfBlob);
+    progress.value = 100;
 
     // 发票处理完成后，更新统计数量
-    const processedCount = result.invoiceData.length;
+    const processedCount = files.length;
     if (processedCount > 0) {
       await updateInvoiceCount(processedCount);
     }

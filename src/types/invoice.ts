@@ -12,13 +12,14 @@ export interface InvoiceCell {
 }
 
 export interface PdfPageData {
-  doc: import('pdf-lib').PDFDocument;
-  page: import('pdf-lib').PDFPage;
-  pdfjsPage: import('pdfjs-dist').PDFPageProxy;
+  doc: import("pdf-lib").PDFDocument;
+  page: import("pdf-lib").PDFPage;
+  pdfjsPage: import("pdfjs-dist").PDFPageProxy;
   width: number;
   height: number;
   sourceFile: string;
   pageNumber: number;
+  originalPageIndex: number; // 页面在原始文档中的索引
 }
 
 export interface PageSize {

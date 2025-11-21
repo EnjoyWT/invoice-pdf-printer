@@ -4,14 +4,39 @@
       <div
         v-for="(item, index) in invoices"
         :key="item.pageNumber"
-        class="group relative p-3 bg-white rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200"
+        :class="[
+          'group relative p-3 rounded-xl border transition-all duration-200',
+          pendingDeletions.has(index)
+            ? 'bg-red-50 border-red-200 opacity-60'
+            : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-md',
+        ]"
       >
-        <!-- 删除按钮 -->
+        <!-- 删除/标记按钮 -->
         <button
-          class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center bg-white text-gray-400 border border-gray-200 rounded-full hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all duration-200 shadow-sm opacity-0 group-hover:opacity-100 z-10 md:opacity-0 opacity-100"
-          @click="$emit('remove', index)"
+          :class="[
+            'absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full transition-all duration-200 shadow-sm z-10',
+            'opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100',
+            pendingDeletions.has(index)
+              ? 'bg-red-500 text-white border-red-600'
+              : 'bg-white text-gray-400 border border-gray-200 hover:text-red-500 hover:border-red-200 hover:bg-red-50',
+          ]"
+          @click="$emit('toggleDeletion', index)"
         >
+          <!-- 已标记:显示勾选图标 -->
           <svg
+            v-if="pendingDeletions.has(index)"
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3.5 w-3.5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            />
+          </svg>
+          <!-- 未标记:显示删除图标 -->
+          <svg
+            v-else
             xmlns="http://www.w3.org/2000/svg"
             class="h-3.5 w-3.5"
             viewBox="0 0 20 20"
@@ -65,10 +90,11 @@ import type { InvoiceCell } from "../../types/invoice";
 
 defineProps<{
   invoices: InvoiceCell[];
+  pendingDeletions: Set<number>;
 }>();
 
 defineEmits<{
-  (e: "remove", index: number): void;
+  (e: "toggleDeletion", index: number): void;
 }>();
 
 /**

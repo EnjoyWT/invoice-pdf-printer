@@ -86,7 +86,7 @@ export async function mergePDFs(
 /**
  * 处理文件并提取页面
  */
-async function processFiles(files: File[]): Promise<PdfPageData[]> {
+export async function processFiles(files: File[]): Promise<PdfPageData[]> {
   const allPages: PdfPageData[] = [];
 
   for (const file of files) {
@@ -108,47 +108,54 @@ async function processFiles(files: File[]): Promise<PdfPageData[]> {
 
     const pageCount = pdfDoc.getPageCount();
     for (let j = 0; j < pageCount; j++) {
-      const page = pdfDoc.getPage(j);
-      const pdfjsPage = await pdfjsDocument.getPage(j + 1);
-      const cropBox = page.getCropBox();
-      let width: number, height: number, processedPage: PDFPage;
+      try {
+        const page = pdfDoc.getPage(j);
+        const pdfjsPage = await pdfjsDocument.getPage(j + 1);
+        const cropBox = page.getCropBox();
+        let width: number, height: number, processedPage: PDFPage;
 
-      if (cropBox?.width > 0 && cropBox?.height > 0) {
-        const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [j]);
-        const bleedBox = page.getBleedBox() || cropBox;
+        if (cropBox?.width > 0 && cropBox?.height > 0) {
+          const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [j]);
+          const bleedBox = page.getBleedBox() || cropBox;
 
-        if (bleedBox?.width > 0 && bleedBox?.height > 0) {
-          copiedPage.setSize(bleedBox.width, bleedBox.height);
-          copiedPage.translateContent(-bleedBox.x, -bleedBox.y);
-          copiedPage.setCropBox(0, 0, bleedBox.width, bleedBox.height);
-          copiedPage.setMediaBox(0, 0, bleedBox.width, bleedBox.height);
-          width = bleedBox.width;
-          height = bleedBox.height;
+          if (bleedBox?.width > 0 && bleedBox?.height > 0) {
+            copiedPage.setSize(bleedBox.width, bleedBox.height);
+            copiedPage.translateContent(-bleedBox.x, -bleedBox.y);
+            copiedPage.setCropBox(0, 0, bleedBox.width, bleedBox.height);
+            copiedPage.setMediaBox(0, 0, bleedBox.width, bleedBox.height);
+            width = bleedBox.width;
+            height = bleedBox.height;
+          } else {
+            copiedPage.setSize(cropBox.width, cropBox.height);
+            copiedPage.translateContent(-cropBox.x, -cropBox.y);
+            copiedPage.setCropBox(0, 0, cropBox.width, cropBox.height);
+            copiedPage.setMediaBox(0, 0, cropBox.width, cropBox.height);
+            width = cropBox.width;
+            height = cropBox.height;
+          }
+          processedPage = copiedPage;
         } else {
-          copiedPage.setSize(cropBox.width, cropBox.height);
-          copiedPage.translateContent(-cropBox.x, -cropBox.y);
-          copiedPage.setCropBox(0, 0, cropBox.width, cropBox.height);
-          copiedPage.setMediaBox(0, 0, cropBox.width, cropBox.height);
-          width = cropBox.width;
-          height = cropBox.height;
+          const mediaBox = page.getMediaBox();
+          processedPage = page;
+          width = mediaBox.width;
+          height = mediaBox.height;
         }
-        processedPage = copiedPage;
-      } else {
-        const mediaBox = page.getMediaBox();
-        processedPage = page;
-        width = mediaBox.width;
-        height = mediaBox.height;
-      }
 
-      allPages.push({
-        doc: pdfDoc,
-        page: processedPage,
-        pdfjsPage,
-        width,
-        height,
-        sourceFile: file.name,
-        pageNumber: j + 1,
-      });
+        allPages.push({
+          doc: pdfDoc,
+          page: processedPage,
+          pdfjsPage,
+          width,
+          height,
+          sourceFile: file.name,
+          pageNumber: j + 1,
+          originalPageIndex: j, // 保存原始页面索引
+        });
+      } catch (pageError) {
+        console.error(`处理文件 ${file.name} 第 ${j + 1} 页时出错:`, pageError);
+        // 跳过问题页面,继续处理下一页
+        continue;
+      }
     }
   }
 
@@ -158,7 +165,7 @@ async function processFiles(files: File[]): Promise<PdfPageData[]> {
 /**
  * 提取发票信息 - 优化版,使用并发处理
  */
-async function extractInvoiceData(
+export async function extractInvoiceData(
   allPages: PdfPageData[]
 ): Promise<InvoiceCell[]> {
   const cellData: InvoiceCell[] = [];
@@ -520,7 +527,7 @@ function extractInvoiceNumber(textMap: any[]): string {
 /**
  * 创建合并后的PDF文档 - 使用智能布局算法
  */
-async function createMergedDocument(
+export async function createMergedDocument(
   allPages: PdfPageData[],
   options: {
     pagesPerSheet: number;
@@ -549,16 +556,27 @@ async function createMergedDocument(
       const pageIndex = i * pagesPerSheet + j;
       if (pageIndex >= allPages.length) break;
 
-      const { page } = allPages[pageIndex];
-      const position = layout.positions[j];
+      try {
+        const { doc, originalPageIndex } = allPages[pageIndex];
+        const position = layout.positions[j];
 
-      const embeddedPage = await outputPdfDoc.embedPage(page);
-      newPage.drawPage(embeddedPage, {
-        x: position.x,
-        y: position.y,
-        width: position.width,
-        height: position.height,
-      });
+        // 从原始文档复制页面到输出文档
+        const [copiedPage] = await outputPdfDoc.copyPages(doc, [
+          originalPageIndex,
+        ]);
+        const embeddedPage = await outputPdfDoc.embedPage(copiedPage);
+
+        newPage.drawPage(embeddedPage, {
+          x: position.x,
+          y: position.y,
+          width: position.width,
+          height: position.height,
+        });
+      } catch (embedError) {
+        console.error(`嵌入页面 ${pageIndex + 1} 时出错:`, embedError);
+        // 跳过问题页面,继续处理下一页
+        continue;
+      }
     }
   }
 
