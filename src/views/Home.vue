@@ -63,7 +63,12 @@
 
           <button
             class="px-3 py-1.5 md:px-4 md:py-2 bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 flex items-center space-x-1 md:space-x-2 whitespace-nowrap"
-            @click="clear"
+            @click="
+              (e) => {
+                (e.currentTarget as HTMLElement).blur();
+                clear();
+              }
+            "
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
