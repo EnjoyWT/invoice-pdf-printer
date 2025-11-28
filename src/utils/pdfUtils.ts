@@ -557,14 +557,12 @@ export async function createMergedDocument(
       if (pageIndex >= allPages.length) break;
 
       try {
-        const { doc, originalPageIndex } = allPages[pageIndex];
+        const { page } = allPages[pageIndex];
         const position = layout.positions[j];
 
-        // 从原始文档复制页面到输出文档
-        const [copiedPage] = await outputPdfDoc.copyPages(doc, [
-          originalPageIndex,
-        ]);
-        const embeddedPage = await outputPdfDoc.embedPage(copiedPage);
+        // 直接使用已经处理过的页面（已经过裁剪和位置调整）
+        // 这样可以保留 processFiles 中对 bleedBox/cropBox 的处理结果
+        const embeddedPage = await outputPdfDoc.embedPage(page);
 
         newPage.drawPage(embeddedPage, {
           x: position.x,
