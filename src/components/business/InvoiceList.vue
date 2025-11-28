@@ -60,7 +60,7 @@
         <div class="flex items-center justify-between mb-2">
           <!-- 序号：Apple 风格修改 (灰色胶囊、无边框、圆润、等宽数字) -->
           <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[13px] font-bold bg-gray-100 text-gray-900 tabular-nums"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[13px] font-bold bg-gray-100 text-blue-600 tabular-nums"
           >
             第 {{ index + 1 }} 张
           </span>
@@ -95,7 +95,7 @@
           <div class="flex items-baseline space-x-0.5">
             <span class="text-xs text-gray-400 font-medium">¥</span>
             <span
-              class="text-lg font-bold text-gray-900 tabular-nums -tracking-wide"
+              class="text-lg font-bold text-blue-600 tabular-nums -tracking-wide"
             >
               {{ getDisplayAmount(item) }}
             </span>
