@@ -1,16 +1,7 @@
 <template>
-  <Transition
-    enter-active-class="transition ease-out duration-300"
-    enter-from-class="opacity-0 -translate-y-2"
-    enter-to-class="opacity-100 translate-y-0"
-    leave-active-class="transition ease-in duration-200"
-    leave-from-class="opacity-100 translate-y-0"
-    leave-to-class="opacity-0 -translate-y-2"
+  <div
+    class="bg-rose-50 border-b border-rose-200 px-4 py-3 flex items-center gap-4"
   >
-    <div
-      v-if="count > 0"
-      class="bg-gradient-to-r from-red-50 to-orange-50 border-y border-red-200 px-4 py-3 flex items-center gap-4"
-    >
       <!-- 选择信息 -->
       <div class="flex items-center gap-2">
         <svg
@@ -41,13 +32,12 @@
         </button>
         <button
           @click="$emit('confirm')"
-          class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+          class="px-3 py-1.5 text-xs font-medium bg-rose-500 text-white hover:bg-rose-600 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1"
         >
           确认删除
         </button>
       </div>
-    </div>
-  </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">

@@ -138,11 +138,20 @@
           </div>
 
           <!-- 批量操作栏 -->
-          <BatchActionBar
-            :count="pendingDeletions.size"
-            @cancel="cancelDeletions"
-            @confirm="confirmDeletions"
-          />
+          <div
+            class="grid transition-all duration-300 ease-out"
+            :style="{
+              gridTemplateRows: pendingDeletions.size > 0 ? '1fr' : '0fr',
+            }"
+          >
+            <div class="overflow-hidden">
+              <BatchActionBar
+                :count="pendingDeletions.size"
+                @cancel="cancelDeletions"
+                @confirm="confirmDeletions"
+              />
+            </div>
+          </div>
 
           <InvoiceList
             :invoices="cells"

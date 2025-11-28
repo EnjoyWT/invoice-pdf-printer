@@ -7,18 +7,17 @@
         :class="[
           'group relative p-3 rounded-xl border transition-all duration-200',
           pendingDeletions.has(index)
-            ? 'bg-red-50 border-red-200 opacity-60'
-            : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-md',
+            ? 'bg-rose-50/80 border-rose-300'
+            : 'bg-white border-gray-200/80 hover:bg-gray-50 hover:shadow-sm',
         ]"
       >
         <!-- 删除/标记按钮 -->
         <button
           :class="[
             'absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full transition-all duration-200 shadow-sm z-10',
-            'opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100',
             pendingDeletions.has(index)
-              ? 'bg-red-500 text-white border-red-600'
-              : 'bg-white text-gray-400 border border-gray-200 hover:text-red-500 hover:border-red-200 hover:bg-red-50',
+              ? 'opacity-100 bg-rose-500 text-white border border-rose-500'
+              : 'opacity-0 group-hover:opacity-100 bg-white text-gray-400 border border-gray-200 hover:text-rose-500 hover:border-rose-400 hover:bg-rose-50',
           ]"
           @click="$emit('toggleDeletion', index)"
         >
@@ -53,11 +52,11 @@
         <!-- 列表内容 -->
         <div class="flex items-start justify-between mb-1">
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600"
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600"
           >
-            #{{ index + 1 }}
+            第 {{ index + 1 }} 张
           </span>
-          <span class="text-xs text-gray-400">{{ item.date }}</span>
+          <span class="text-xs text-gray-500">{{ item.date }}</span>
         </div>
 
         <div class="mb-1">
@@ -71,11 +70,11 @@
 
         <div class="flex items-center justify-between mt-2">
           <span
-            class="text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100"
+            class="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md"
           >
             {{ getInvoiceType(item.type) }}
           </span>
-          <span class="text-sm font-bold text-blue-600">
+          <span class="text-sm font-semibold text-gray-900">
             ¥{{ getDisplayAmount(item) }}
           </span>
         </div>
