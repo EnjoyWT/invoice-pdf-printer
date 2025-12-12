@@ -1,7 +1,7 @@
 {
   "name": "invoice-pdf-printer",
   "private": true,
-  "version": "0.5.2",
+  "version": "0.5.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -38,6 +38,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^5.1.4",
+    "vite-plugin-pwa": "^1.2.0",
     "vue-tsc": "^2.2.10"
   }
 }
