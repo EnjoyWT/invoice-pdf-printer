@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 # 必须添加权限，否则最后一步上传 Release 会报 403 错误
 permissions:
   contents: write
