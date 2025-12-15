@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js (for Vercel)
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
       # 必须指定 Org ID 和 Project ID，否则 CI 无法知道部署到哪里
@@ -74,7 +74,7 @@ jobs:
           APP_NAME="发票助手"
           echo "Building $APP_NAME for $APP_URL on ${{ matrix.os }}"
           # 开始构建
-          pake "$APP_URL" --name "$APP_NAME" --embed
+          pake "$APP_URL" --name "$APP_NAME" 
           # 整理文件
           mkdir release_assets
           
