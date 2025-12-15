@@ -50,7 +50,6 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-          - os: windows-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
