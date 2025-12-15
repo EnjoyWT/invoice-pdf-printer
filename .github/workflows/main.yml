@@ -1,0 +1,93 @@
+name: Deploy Web & Build Desktop (Mac/Win)
+on:
+  push:
+    tags:
+      - 'v*'
+# 必须添加权限，否则最后一步上传 Release 会报 403 错误
+permissions:
+  contents: write
+jobs:
+  # ===============================
+  # ① 部署 Web（Vercel）
+  # ===============================
+  deploy-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js (for Vercel)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+      # 必须指定 Org ID 和 Project ID，否则 CI 无法知道部署到哪里
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build Web (CI)
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Deploy to Vercel Production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  # ===============================
+  # ② 构建桌面端（Pake）
+  # ===============================
+  build-desktop:
+    needs: deploy-web
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+          - os: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      # Pake 要求 Node >= 22
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pake 要求 Rust >= 1.85 (Stable 默认满足)
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Install Pake CLI
+        run: npm install -g pake-cli
+      - name: Build Desktop App
+        shell: bash
+        run: |
+          APP_URL="https://fp.yoloxy.com/"
+          APP_NAME="发票助手"
+          echo "Building $APP_NAME for $APP_URL on ${{ matrix.os }}"
+          # 开始构建
+          pake "$APP_URL" --name "$APP_NAME" --embed
+          # 整理文件
+          mkdir release_assets
+          
+          # 分开移动文件以防止报错
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv *.msi release_assets/ 2>/dev/null || true
+            mv *.exe release_assets/ 2>/dev/null || true
+          else
+            mv *.dmg release_assets/ 2>/dev/null || true
+          fi
+      - name: Upload Assets to GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release_assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
