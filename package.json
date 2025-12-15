@@ -1,7 +1,7 @@
 {
   "name": "invoice-pdf-printer",
   "private": true,
-  "version": "0.5.3",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,16 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@embedpdf/core": "^1.5.0",
+    "@embedpdf/engines": "^1.5.0",
+    "@embedpdf/plugin-export": "^1.5.0",
+    "@embedpdf/plugin-loader": "^1.5.0",
+    "@embedpdf/plugin-print": "^1.5.0",
+    "@embedpdf/plugin-render": "^1.5.0",
+    "@embedpdf/plugin-scroll": "^1.5.0",
+    "@embedpdf/plugin-thumbnail": "^1.5.0",
+    "@embedpdf/plugin-viewport": "^1.5.0",
+    "@embedpdf/plugin-zoom": "^1.5.0",
     "axios": "^1.11.0",
     "jsqr": "^1.4.0",
     "lodash-es": "^4.17.21",

@@ -2,13 +2,38 @@
 
 # 更新记录 / Change Log
 
-> 最后更新: 2025-12-12
+> 最后更新: 2025-12-15
 
 本文件由 AI 自动维护。请不要手动更改历史记录内容。
 
 ---
 
 ## 历史更新记录（AI 插入从此处开始）
+
+## [v0.6.0] - 2025-12-15
+
+### 🚀 重大更新
+
+**更新者**: Claude
+
+- 使用 embed-pdf-viewer 替换原生 iframe，实现自定义 PDF 查看器
+
+### ✨ 新增功能
+
+- 新增 PDF 查看器组件（PdfViewer.vue），支持更丰富的交互功能
+- 新增 Chrome 风格工具栏（PdfToolbar.vue），包含以下功能：
+  - 缩略图侧边栏切换按钮
+  - 缩放控制（放大/缩小/百分比显示）
+  - 适应模式切换（适合一页/适合页面宽度）
+  - 打印按钮（调用浏览器原生打印对话框）
+  - 下载按钮（导出 PDF 文件）
+- 新增可收起的缩略图侧边栏，支持快速页面导航
+
+### 🔧 技术改进
+
+- 集成 @embedpdf/core、@embedpdf/engines 等核心包
+- 集成 @embedpdf/plugin-zoom、@embedpdf/plugin-thumbnail、@embedpdf/plugin-print、@embedpdf/plugin-export 等功能插件
+- 工具栏按钮点击后自动移除焦点，优化用户体验
 
 ## [v0.5.3] - 2025-12-12
 

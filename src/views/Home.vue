@@ -122,9 +122,9 @@
       >
         <!-- PDF 预览区域 (仅在 PC 端显示) -->
         <div
-          class="hidden md:block flex-1 h-full bg-gray-100 rounded-2xl overflow-hidden shadow-inner border border-gray-200"
+          class="hidden md:block flex-1 h-full rounded-2xl overflow-hidden shadow-inner border border-gray-200"
         >
-          <iframe class="w-full h-full" :src="pdfSrc" frameborder="0"></iframe>
+          <PdfViewer :pdfSrc="pdfSrc" />
         </div>
 
         <!-- 发票列表区域 -->
@@ -225,6 +225,7 @@ import InvoiceStats from "../components/business/InvoiceStats.vue";
 import ProcessingToast from "../components/ui/ProcessingToast.vue";
 import InvoiceList from "../components/business/InvoiceList.vue";
 import BatchActionBar from "../components/ui/BatchActionBar.vue";
+import PdfViewer from "../components/pdf/PdfViewer.vue";
 import { getInvoiceType } from "../utils/invoiceUtils";
 import {
   processFiles,
