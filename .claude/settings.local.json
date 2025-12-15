@@ -13,7 +13,10 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm remove:*)"
     ]
   }
 }

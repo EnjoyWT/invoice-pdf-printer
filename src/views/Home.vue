@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 -->
     <header
       ref="headerRef"
-      class="w-full px-4 md:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-none pwa-top-divider"
+      class="w-full px-4 md:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-none"
     >
       <div
         class="max-w-7xl mx-auto flex justify-between items-center h-auto md:h-12 relative"
@@ -515,22 +515,4 @@ function openPdfPreview() {
   transition: transform 0.5s ease; /* 确保移动动画一致 */
 }
 
-/* PWA 独立模式：在顶部添加浅色分割线，弱化系统标题栏衔接 */
-@media (display-mode: standalone) {
-  .pwa-top-divider::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      rgba(226, 232, 240, 0),
-      rgba(226, 232, 240, 0.8),
-      rgba(226, 232, 240, 0)
-    );
-    pointer-events: none;
-  }
-}
 </style>
