@@ -1,82 +1,3 @@
-<script setup lang="ts">
-import { computed, ref } from "vue";
-import { useZoom } from "@embedpdf/plugin-zoom/vue";
-import { ZoomMode } from "@embedpdf/plugin-zoom";
-import { usePrintCapability } from "@embedpdf/plugin-print/vue";
-import { useExportCapability } from "@embedpdf/plugin-export/vue";
-
-defineProps<{
-  showThumbnails: boolean;
-}>();
-
-const emit = defineEmits<{
-  (e: "toggle-thumbnails"): void;
-}>();
-
-// 缩放控制
-const { provides: zoomProvides, state: zoomState } = useZoom();
-
-// 打印功能
-const { provides: printApi } = usePrintCapability();
-
-// 导出/下载功能
-const { provides: exportApi } = useExportCapability();
-
-// 适应模式状态：false = 适合宽度, true = 适合一页
-const isFitPage = ref(false);
-
-const zoomLevel = computed(() =>
-  zoomState.value ? Math.round(zoomState.value.currentZoomLevel * 100) : 100
-);
-
-const fitModeTitle = computed(() =>
-  isFitPage.value ? "适合一页" : "适合页面宽度"
-);
-
-const handleZoomIn = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  zoomProvides.value?.zoomIn();
-};
-
-const handleZoomOut = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  zoomProvides.value?.zoomOut();
-};
-
-const handleToggleFitMode = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  if (isFitPage.value) {
-    zoomProvides.value?.requestZoom(ZoomMode.FitPage);
-  } else {
-    zoomProvides.value?.requestZoom(ZoomMode.FitWidth);
-  }
-  isFitPage.value = !isFitPage.value;
-};
-
-const handlePrint = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  if (printApi.value) {
-    const task = printApi.value.print();
-    task.wait(
-      () => console.log("Print completed"),
-      (error) => console.error("Print failed:", error)
-    );
-  }
-};
-
-const handleDownload = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  if (exportApi.value) {
-    exportApi.value.download();
-  }
-};
-
-const handleToggleThumbnails = (e: MouseEvent) => {
-  (e.currentTarget as HTMLElement).blur();
-  emit("toggle-thumbnails");
-};
-</script>
-
 <template>
   <div class="pdf-toolbar">
     <!-- 缩略图切换按钮 -->
@@ -165,6 +86,13 @@ const handleToggleThumbnails = (e: MouseEvent) => {
         <line x1="4" y1="6" x2="20" y2="6" />
       </svg>
     </button>
+    <!-- 分隔线 -->
+    <div class="toolbar-divider"></div>
+
+    <!-- 页码显示 -->
+    <span v-if="totalPages > 0" class="page-indicator">
+      {{ currentPage + 1 }}/{{ totalPages }} 页
+    </span>
 
     <!-- 右侧空白区 -->
     <div class="toolbar-spacer"></div>
@@ -203,6 +131,86 @@ const handleToggleThumbnails = (e: MouseEvent) => {
   </div>
 </template>
 
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { useZoom } from "@embedpdf/plugin-zoom/vue";
+import { ZoomMode } from "@embedpdf/plugin-zoom";
+import { usePrintCapability } from "@embedpdf/plugin-print/vue";
+import { useExportCapability } from "@embedpdf/plugin-export/vue";
+
+defineProps<{
+  showThumbnails: boolean;
+  currentPage: number;
+  totalPages: number;
+}>();
+
+const emit = defineEmits<{
+  (e: "toggle-thumbnails"): void;
+}>();
+
+// 缩放控制
+const { provides: zoomProvides, state: zoomState } = useZoom();
+
+// 打印功能
+const { provides: printApi } = usePrintCapability();
+
+// 导出/下载功能
+const { provides: exportApi } = useExportCapability();
+
+// 适应模式状态：false = 适合宽度, true = 适合一页
+const isFitPage = ref(false);
+
+const zoomLevel = computed(() =>
+  zoomState.value ? Math.round(zoomState.value.currentZoomLevel * 100) : 100
+);
+
+const fitModeTitle = computed(() =>
+  isFitPage.value ? "适合一页" : "适合页面宽度"
+);
+
+const handleZoomIn = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  zoomProvides.value?.zoomIn();
+};
+
+const handleZoomOut = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  zoomProvides.value?.zoomOut();
+};
+
+const handleToggleFitMode = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  if (isFitPage.value) {
+    zoomProvides.value?.requestZoom(ZoomMode.FitPage);
+  } else {
+    zoomProvides.value?.requestZoom(ZoomMode.FitWidth);
+  }
+  isFitPage.value = !isFitPage.value;
+};
+
+const handlePrint = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  if (printApi.value) {
+    const task = printApi.value.print();
+    task.wait(
+      () => console.log("Print completed"),
+      (error) => console.error("Print failed:", error)
+    );
+  }
+};
+
+const handleDownload = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  if (exportApi.value) {
+    exportApi.value.download();
+  }
+};
+
+const handleToggleThumbnails = (e: MouseEvent) => {
+  (e.currentTarget as HTMLElement).blur();
+  emit("toggle-thumbnails");
+};
+</script>
 <style scoped>
 /* 工具栏样式 - Chrome PDF 风格 */
 .pdf-toolbar {
@@ -273,6 +281,16 @@ const handleToggleThumbnails = (e: MouseEvent) => {
     system-ui,
     -apple-system,
     sans-serif;
+}
+
+.page-indicator {
+  color: #e5e7eb;
+  font-size: 13px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  white-space: nowrap;
 }
 
 .toolbar-spacer {

@@ -11,6 +11,8 @@
       <!-- 工具栏 -->
       <PdfToolbar
         :showThumbnails="showThumbnails"
+        :currentPage="currentPage"
+        :totalPages="totalPages"
         @toggle-thumbnails="showThumbnails = !showThumbnails"
       />
 
@@ -33,14 +35,13 @@
                 :style="{
                   position: 'absolute',
                   top: `${meta.top}px`,
-                  left: '12px',
-                  right: '12px',
-                  height: `${meta.height + meta.labelHeight + 16}px`,
+                  left: '8px',
+                  right: '8px',
+                  height: `${meta.height + 8}px`,
                 }"
                 @click="handleThumbnailClick(meta.pageIndex)"
               >
                 <ThumbImg :meta="meta" class="thumbnail-img" />
-                <span class="thumbnail-label">{{ meta.pageIndex + 1 }}</span>
               </div>
             </template>
           </ThumbnailsPane>
@@ -74,6 +75,7 @@
         @page-change="onPageChange"
         @scroll-ready="onScrollReady"
         @thumbnail-ready="onThumbnailReady"
+        @total-pages="onTotalPages"
       />
     </EmbedPDF>
   </div>
@@ -114,7 +116,7 @@ import PdfToolbar from "./PdfToolbar.vue";
 // 内部组件：用于在 EmbedPDF 上下文中使用 useCapability
 const ScrollWatcher = defineComponent({
   name: "ScrollWatcher",
-  emits: ["page-change", "scroll-ready", "thumbnail-ready"],
+  emits: ["page-change", "scroll-ready", "thumbnail-ready", "total-pages"],
   setup(_, { emit }) {
     const { provides: scrollCapability } = useCapability<ScrollPlugin>(
       ScrollPlugin.id
@@ -130,6 +132,10 @@ const ScrollWatcher = defineComponent({
           emit("scroll-ready", cap);
           cap.onPageChange((payload) => {
             emit("page-change", payload.pageNumber - 1);
+            // 同时发送总页数
+            if (payload.totalPages) {
+              emit("total-pages", payload.totalPages);
+            }
           });
         }
       },
@@ -166,6 +172,9 @@ const thumbnailsSidebarRef = ref<HTMLElement | null>(null);
 // 当前页码
 const currentPage = ref(0);
 
+// 总页数
+const totalPages = ref(0);
+
 // 滚动能力引用
 let scrollCap: ScrollCapability | null = null;
 let thumbnailCap: ThumbnailCapability | null = null;
@@ -185,6 +194,11 @@ const onScrollReady = (cap: ScrollCapability) => {
 // 缩略图能力就绪
 const onThumbnailReady = (cap: ThumbnailCapability) => {
   thumbnailCap = cap;
+};
+
+// 总页数更新
+const onTotalPages = (pages: number) => {
+  totalPages.value = pages;
 };
 
 // 页面变化处理
@@ -262,8 +276,10 @@ const plugins = computed(() => [
     defaultZoomLevel: 1.0,
   }),
   createPluginRegistration(ThumbnailPluginPackage, {
-    width: 120,
-    autoScroll: false, // 禁用自动滚动，防止反弹
+    width: 155, // 适配侧边栏宽度
+    gap: 12, // 增加间距以容纳 padding
+    labelHeight: 0,
+    autoScroll: false,
   }),
   createPluginRegistration(PrintPluginPackage),
   createPluginRegistration(ExportPluginPackage, {
@@ -340,46 +356,35 @@ const plugins = computed(() => [
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px;
+  justify-content: center;
+  padding: 2px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 4px;
   transition: all 0.15s ease;
   border: 2px solid transparent;
-  background-color: transparent;
+  background-color: rgba(50, 54, 57, 0.5);
   box-sizing: border-box;
 }
 
 .thumbnail-item:hover {
   background-color: #3f4447;
+  border-color: #4b5563;
 }
 
 .thumbnail-item.active {
-  background-color: rgba(59, 130, 246, 0.25);
+  background-color: rgba(59, 130, 246, 0.2);
   border-color: #3b82f6;
 }
 
 .thumbnail-item.active .thumbnail-img {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-}
-
-.thumbnail-item.active .thumbnail-label {
-  color: #60a5fa;
-  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
 }
 
 .thumbnail-img {
   border: 1px solid #4b5563;
   border-radius: 2px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: all 0.15s ease;
-}
-
-.thumbnail-label {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #9ca3af;
-  font-weight: 500;
 }
 
 /* PDF 视图区 */
@@ -393,5 +398,47 @@ const plugins = computed(() => [
   margin: 8px auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   background-color: white;
+}
+</style>
+
+<style>
+/* 滚动条样式 - 针对所有相关容器及其子元素 */
+.pdf-viewer-container .thumbnails-sidebar,
+.pdf-viewer-container .thumbnails-pane,
+.pdf-viewer-container .thumbnails-sidebar * {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 transparent;
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+.pdf-viewer-container .thumbnails-sidebar::-webkit-scrollbar,
+.pdf-viewer-container .thumbnails-pane::-webkit-scrollbar,
+.pdf-viewer-container .thumbnails-sidebar *::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  background-color: transparent !important;
+}
+
+.pdf-viewer-container .thumbnails-sidebar::-webkit-scrollbar-track,
+.pdf-viewer-container .thumbnails-pane::-webkit-scrollbar-track,
+.pdf-viewer-container .thumbnails-sidebar *::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.pdf-viewer-container .thumbnails-sidebar::-webkit-scrollbar-thumb,
+.pdf-viewer-container .thumbnails-pane::-webkit-scrollbar-thumb,
+.pdf-viewer-container .thumbnails-sidebar *::-webkit-scrollbar-thumb {
+  background-color: #6b7280 !important;
+  border-radius: 3px !important;
+  border: 1px solid transparent !important;
+  background-clip: content-box !important;
+}
+
+.pdf-viewer-container .thumbnails-sidebar::-webkit-scrollbar-thumb:hover,
+.pdf-viewer-container .thumbnails-pane::-webkit-scrollbar-thumb:hover,
+.pdf-viewer-container .thumbnails-sidebar *::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af !important;
 }
 </style>
