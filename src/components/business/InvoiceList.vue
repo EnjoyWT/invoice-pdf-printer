@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50">
+  <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 min-h-0">
     <TransitionGroup name="cell-list" tag="div" class="space-y-3">
       <div
         v-for="(item, index) in invoices"
@@ -140,6 +140,9 @@ const getDisplayAmount = (invoice: InvoiceCell): string => {
 
 <style scoped>
 /* 自定义滚动条 - 更加隐形和极简 */
+.custom-scrollbar {
+  overscroll-behavior: contain;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

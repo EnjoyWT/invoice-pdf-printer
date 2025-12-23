@@ -22,6 +22,13 @@ const DEFAULT_CONFIG = {
   BATCH_SIZE: 5,
 };
 
+const DEBUG_PDF_PROCESSING = true;
+const QR_REGION_RATIO = 0.38;
+const QR_TARGET_FAST_PX = 440;
+const QR_TARGET_RETRY_PX = 720;
+const QR_SCALE_FAST_CAP = 1.3;
+const QR_SCALE_RETRY_CAP = 2.4;
+
 /**
  * 主要的PDF合并函数
  */
@@ -100,62 +107,66 @@ export async function processFiles(files: File[]): Promise<PdfPageData[]> {
     }
 
     const arrayBuffer = await file.arrayBuffer();
+
+    // 临时静默 pdf-lib 的内部警告（如 "Invalid object ref"）
+    const originalWarn = console.warn;
+    console.warn = () => {};
     const pdfDoc = await PDFDocument.load(arrayBuffer, {
       ignoreEncryption: true,
+      throwOnInvalidObject: false,
     });
+    console.warn = originalWarn;
     const pdfjsDocument = await pdfjs.getDocument({ data: arrayBuffer })
       .promise;
 
-    const pageCount = pdfDoc.getPageCount();
-    for (let j = 0; j < pageCount; j++) {
-      try {
-        const page = pdfDoc.getPage(j);
-        const pdfjsPage = await pdfjsDocument.getPage(j + 1);
-        const cropBox = page.getCropBox();
-        let width: number, height: number, processedPage: PDFPage;
+    // 已知每个文件都是单页发票：只处理第 1 页，避免无意义循环
+    const j = 0;
+    try {
+      const page = pdfDoc.getPage(j);
+      const pdfjsPage = await pdfjsDocument.getPage(j + 1);
+      const cropBox = page.getCropBox();
+      let width: number, height: number, processedPage: PDFPage;
 
-        if (cropBox?.width > 0 && cropBox?.height > 0) {
-          const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [j]);
-          const bleedBox = page.getBleedBox() || cropBox;
+      if (cropBox?.width > 0 && cropBox?.height > 0) {
+        const [copiedPage] = await pdfDoc.copyPages(pdfDoc, [j]);
+        const bleedBox = page.getBleedBox() || cropBox;
 
-          if (bleedBox?.width > 0 && bleedBox?.height > 0) {
-            copiedPage.setSize(bleedBox.width, bleedBox.height);
-            copiedPage.translateContent(-bleedBox.x, -bleedBox.y);
-            copiedPage.setCropBox(0, 0, bleedBox.width, bleedBox.height);
-            copiedPage.setMediaBox(0, 0, bleedBox.width, bleedBox.height);
-            width = bleedBox.width;
-            height = bleedBox.height;
-          } else {
-            copiedPage.setSize(cropBox.width, cropBox.height);
-            copiedPage.translateContent(-cropBox.x, -cropBox.y);
-            copiedPage.setCropBox(0, 0, cropBox.width, cropBox.height);
-            copiedPage.setMediaBox(0, 0, cropBox.width, cropBox.height);
-            width = cropBox.width;
-            height = cropBox.height;
-          }
-          processedPage = copiedPage;
+        if (bleedBox?.width > 0 && bleedBox?.height > 0) {
+          copiedPage.setSize(bleedBox.width, bleedBox.height);
+          copiedPage.translateContent(-bleedBox.x, -bleedBox.y);
+          copiedPage.setCropBox(0, 0, bleedBox.width, bleedBox.height);
+          copiedPage.setMediaBox(0, 0, bleedBox.width, bleedBox.height);
+          width = bleedBox.width;
+          height = bleedBox.height;
         } else {
-          const mediaBox = page.getMediaBox();
-          processedPage = page;
-          width = mediaBox.width;
-          height = mediaBox.height;
+          copiedPage.setSize(cropBox.width, cropBox.height);
+          copiedPage.translateContent(-cropBox.x, -cropBox.y);
+          copiedPage.setCropBox(0, 0, cropBox.width, cropBox.height);
+          copiedPage.setMediaBox(0, 0, cropBox.width, cropBox.height);
+          width = cropBox.width;
+          height = cropBox.height;
         }
-
-        allPages.push({
-          doc: pdfDoc,
-          page: processedPage,
-          pdfjsPage,
-          width,
-          height,
-          sourceFile: file.name,
-          pageNumber: j + 1,
-          originalPageIndex: j, // 保存原始页面索引
-        });
-      } catch (pageError) {
-        console.error(`处理文件 ${file.name} 第 ${j + 1} 页时出错:`, pageError);
-        // 跳过问题页面,继续处理下一页
-        continue;
+        processedPage = copiedPage;
+      } else {
+        const mediaBox = page.getMediaBox();
+        processedPage = page;
+        width = mediaBox.width;
+        height = mediaBox.height;
       }
+
+      allPages.push({
+        doc: pdfDoc,
+        page: processedPage,
+        pdfjsPage,
+        width,
+        height,
+        sourceFile: file.name,
+        pageNumber: 1,
+        originalPageIndex: 0,
+      });
+    } catch (pageError) {
+      console.error(`处理文件 ${file.name} 第 1 页时出错:`, pageError);
+      continue;
     }
   }
 
@@ -171,7 +182,7 @@ export async function extractInvoiceData(
   const cellData: InvoiceCell[] = [];
 
   // 使用 Promise.all 批量并发处理
-  const batchSize = 6; // 同时处理 6 个页面
+  const batchSize = 5; // render+扫码属于重活，并发太高反而会变慢/更卡
 
   for (let i = 0; i < allPages.length; i += batchSize) {
     const batch = allPages.slice(i, i + batchSize);
@@ -197,68 +208,80 @@ async function extractSinglePageData(
   const { pdfjsPage, pageNumber, sourceFile } = pageData;
 
   try {
-    // 优化 1: 优先使用文本提取(比图像处理快 5-10 倍)
-    let invoiceInfo = await extractInvoiceFromText(pdfjsPage, pageNumber);
+    const t0 = performance.now();
 
-    // 如果文本提取成功且有金额,直接返回
-    if (invoiceInfo.amount && invoiceInfo.amount !== "0") {
-      invoiceInfo.fileName = sourceFile;
-      return invoiceInfo;
-    }
+    const { qrData, timings } = await scanInvoiceQRCode(pdfjsPage);
+    let invoiceInfo = parseQRCode(pageNumber, qrData);
 
-    // 优化 2: 文本提取失败时,尝试二维码识别
-    // 降低渲染分辨率 (scale: 4 → 2.5)
-    const viewport = pdfjsPage.getViewport({ scale: 2.5 });
-
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      throw new Error("无法获取Canvas 2D渲染上下文");
-    }
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await pdfjsPage.render({ canvasContext: context, viewport }).promise;
-
-    // 优化 3: 智能扫描区域 - 二维码通常在左上角
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const scanWidth = Math.floor(canvas.width * 0.35);
-    const scanHeight = Math.floor(canvas.height * 0.35);
-
-    // 提取左上角区域
-    const regionData = new Uint8ClampedArray(scanWidth * scanHeight * 4);
-    for (let y = 0; y < scanHeight; y++) {
-      const sourceStart = y * canvas.width * 4;
-      const targetStart = y * scanWidth * 4;
-      regionData.set(
-        imageData.data.subarray(sourceStart, sourceStart + scanWidth * 4),
-        targetStart
-      );
-    }
-
-    // 二维码识别
-    const qrCode = jsQR(regionData, scanWidth, scanHeight, {
-      inversionAttempts: "dontInvert",
-    });
-
-    if (qrCode?.data) {
-      invoiceInfo = parseQRCode(pageNumber, qrCode.data);
-    }
-
-    // 优化 4: 只在必要时增强信息
     if (
       !invoiceInfo.amount ||
       invoiceInfo.amount === "0" ||
-      !invoiceInfo.date
+      !invoiceInfo.date ||
+      !invoiceInfo.type ||
+      !invoiceInfo.number
     ) {
-      const enhancedInfo = await enhanceInvoiceInfo(pdfjsPage, invoiceInfo);
-      enhancedInfo.fileName = sourceFile;
-      return enhancedInfo;
+      const textT0 = performance.now();
+      const textContent = await pdfjsPage.getTextContent();
+      const textItems = textContent.items;
+      const fullText = textItems.map((item: any) => item.str).join(" ");
+
+      if (!invoiceInfo.type) {
+        invoiceInfo.type = extractInvoiceType(fullText);
+      }
+      if (!invoiceInfo.amount || invoiceInfo.amount === "0") {
+        const amountFromText = extractAmount(fullText);
+        if (amountFromText && amountFromText !== "0") {
+          invoiceInfo.amount = amountFromText;
+        }
+      }
+      if (!invoiceInfo.date) {
+        invoiceInfo.date = extractDate(fullText);
+      }
+
+      if (!invoiceInfo.number || !invoiceInfo.code || !invoiceInfo.checkCode) {
+        const textMap = textItems.map((item: any) => ({
+          text: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+          width: item.width,
+          height: item.height,
+        }));
+
+        if (!invoiceInfo.amount || invoiceInfo.amount === "0") {
+          const amountFromMap = extractAmountFromTextMap(textMap);
+          if (amountFromMap) invoiceInfo.amount = amountFromMap;
+        }
+        if (!invoiceInfo.date) {
+          const dateFromMap = extractDateFromTextMap(textMap);
+          if (dateFromMap) invoiceInfo.date = dateFromMap;
+        }
+        if (!invoiceInfo.type) {
+          const typeFromMap = extractTypeFromTextMap(textMap);
+          if (typeFromMap) invoiceInfo.type = typeFromMap;
+        }
+        if (!invoiceInfo.number) {
+          const numberFromMap = extractInvoiceNumber(textMap);
+          if (numberFromMap) invoiceInfo.number = numberFromMap;
+        }
+      }
+
+      timings.textMs = performance.now() - textT0;
     }
 
     invoiceInfo.fileName = sourceFile;
+
+    if (DEBUG_PDF_PROCESSING) {
+      const totalMs = performance.now() - t0;
+      console.log("[invoice]", {
+        sourceFile,
+        pageNumber,
+        totalMs: Number(totalMs.toFixed(1)),
+        ...timings,
+        qrDataPreview: qrData ? qrData.slice(0, 60) : null,
+        invoiceInfo,
+      });
+    }
+
     return invoiceInfo;
   } catch (error) {
     console.error(`处理页面 ${pageNumber} 时发生错误:`, error);
@@ -270,6 +293,138 @@ async function extractSinglePageData(
       date: "",
     };
   }
+}
+
+async function scanInvoiceQRCode(pdfjsPage: any): Promise<{
+  qrData: string | null;
+  timings: {
+    renderMs?: number;
+    qrMs?: number;
+    textMs?: number;
+    scaleFast?: number;
+    scaleRetry?: number;
+    usedRetry?: boolean;
+    viewportFast?: { w: number; h: number };
+    viewportRetry?: { w: number; h: number };
+    regionFast?: { w: number; h: number };
+    regionRetry?: { w: number; h: number };
+  };
+}> {
+  const timings: {
+    renderMs?: number;
+    qrMs?: number;
+    textMs?: number;
+    scaleFast?: number;
+    scaleRetry?: number;
+    usedRetry?: boolean;
+    viewportFast?: { w: number; h: number };
+    viewportRetry?: { w: number; h: number };
+    regionFast?: { w: number; h: number };
+    regionRetry?: { w: number; h: number };
+  } = {};
+
+  const scaleFast = Math.min(
+    QR_SCALE_FAST_CAP,
+    getAdaptiveQrScale(pdfjsPage, QR_TARGET_FAST_PX)
+  );
+  timings.scaleFast = scaleFast;
+  const fast = await scanInvoiceQRCodeOnce(pdfjsPage, scaleFast);
+  timings.renderMs = (timings.renderMs ?? 0) + (fast.timings.renderMs ?? 0);
+  timings.qrMs = (timings.qrMs ?? 0) + (fast.timings.qrMs ?? 0);
+  if (fast.timings.viewport) timings.viewportFast = fast.timings.viewport;
+  if (fast.timings.region) timings.regionFast = fast.timings.region;
+  if (fast.qrData) return { qrData: fast.qrData, timings };
+
+  const scaleRetry = Math.min(
+    QR_SCALE_RETRY_CAP,
+    getAdaptiveQrScale(pdfjsPage, QR_TARGET_RETRY_PX)
+  );
+  timings.scaleRetry = scaleRetry;
+  timings.usedRetry = true;
+  const retry = await scanInvoiceQRCodeOnce(pdfjsPage, scaleRetry);
+  timings.renderMs = (timings.renderMs ?? 0) + (retry.timings.renderMs ?? 0);
+  timings.qrMs = (timings.qrMs ?? 0) + (retry.timings.qrMs ?? 0);
+  if (retry.timings.viewport) timings.viewportRetry = retry.timings.viewport;
+  if (retry.timings.region) timings.regionRetry = retry.timings.region;
+  return { qrData: retry.qrData, timings };
+}
+
+function getAdaptiveQrScale(pdfjsPage: any, targetQrPx: number): number {
+  const baseViewport = pdfjsPage.getViewport({ scale: 1 });
+  const denom = Math.max(1, baseViewport.width * QR_REGION_RATIO);
+  const scale = targetQrPx / denom;
+
+  if (!Number.isFinite(scale) || scale <= 0) return 1.4;
+  // 性能优先：避免为“已经很清晰”的PDF渲染过大的像素。
+  return Math.max(0.9, scale);
+}
+
+async function scanInvoiceQRCodeOnce(
+  pdfjsPage: any,
+  scale: number
+): Promise<{
+  qrData: string | null;
+  timings: {
+    renderMs?: number;
+    qrMs?: number;
+    viewport?: { w: number; h: number };
+    region?: { w: number; h: number };
+  };
+}> {
+  const timings: {
+    renderMs?: number;
+    qrMs?: number;
+    viewport?: { w: number; h: number };
+    region?: { w: number; h: number };
+  } = {};
+  const viewport = pdfjsPage.getViewport({ scale });
+  timings.viewport = { w: viewport.width, h: viewport.height };
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("无法获取Canvas 2D渲染上下文");
+  }
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  const renderT0 = performance.now();
+  await pdfjsPage.render({ canvasContext: context, viewport }).promise;
+  timings.renderMs = performance.now() - renderT0;
+
+  const scanWidth = Math.max(1, Math.floor(canvas.width * QR_REGION_RATIO));
+  const scanHeight = Math.max(1, Math.floor(canvas.height * QR_REGION_RATIO));
+  timings.region = { w: scanWidth, h: scanHeight };
+
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width = scanWidth;
+  cropCanvas.height = scanHeight;
+  const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
+  if (!cropCtx) {
+    throw new Error("无法获取裁剪Canvas 2D渲染上下文");
+  }
+
+  cropCtx.drawImage(
+    canvas,
+    0,
+    0,
+    scanWidth,
+    scanHeight,
+    0,
+    0,
+    scanWidth,
+    scanHeight
+  );
+  const imageData = cropCtx.getImageData(0, 0, scanWidth, scanHeight);
+
+  const qrT0 = performance.now();
+  const qrCode = jsQR(imageData.data, scanWidth, scanHeight, {
+    inversionAttempts: "attemptBoth",
+  });
+  timings.qrMs = performance.now() - qrT0;
+
+  return { qrData: qrCode?.data ?? null, timings };
 }
 
 /**
@@ -745,21 +900,31 @@ function parseQRCode(
     return { pageNumber, type: "", amount: "0", date: "", fileName: "" };
   }
 
+  const normalize = (v?: string) => (v ?? "").trim();
+  const normalizeDate = (v?: string) => {
+    const raw = normalize(v);
+    if (!raw) return "";
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length >= 8) {
+      return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    }
+    return raw;
+  };
+
   const [constNumber, type, code, number, amount, date, checkCode] =
     qrCodeData.split(",");
-  const formattedDate = date
-    ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
-    : "";
+
+  const formattedDate = normalizeDate(date);
 
   return {
     pageNumber,
-    constNumber,
-    type,
-    code,
-    number,
-    amount,
+    constNumber: normalize(constNumber),
+    type: normalize(type),
+    code: normalize(code),
+    number: normalize(number),
+    amount: normalize(amount) || "0",
     date: formattedDate,
-    checkCode,
+    checkCode: normalize(checkCode),
     fileName: "",
   };
 }

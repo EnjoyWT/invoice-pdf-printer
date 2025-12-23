@@ -129,7 +129,7 @@
 
         <!-- 发票列表区域 -->
         <div
-          class="w-full md:w-80 h-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+          class="w-full md:w-80 h-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden min-h-0"
         >
           <div
             class="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-none"

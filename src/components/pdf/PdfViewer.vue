@@ -1,73 +1,3 @@
-<script setup lang="ts">
-import { computed, watch, ref } from 'vue';
-import { usePdfiumEngine } from '@embedpdf/engines/vue';
-import { EmbedPDF } from '@embedpdf/core/vue';
-import { createPluginRegistration } from '@embedpdf/core';
-
-// 核心插件
-import { ViewportPluginPackage } from '@embedpdf/plugin-viewport';
-import { Viewport } from '@embedpdf/plugin-viewport/vue';
-import { ScrollPluginPackage } from '@embedpdf/plugin-scroll';
-import { Scroller } from '@embedpdf/plugin-scroll/vue';
-import { LoaderPluginPackage } from '@embedpdf/plugin-loader';
-import { RenderPluginPackage } from '@embedpdf/plugin-render';
-import { RenderLayer } from '@embedpdf/plugin-render/vue';
-
-// 功能插件
-import { ZoomPluginPackage } from '@embedpdf/plugin-zoom';
-import { ThumbnailPluginPackage } from '@embedpdf/plugin-thumbnail';
-import { ThumbnailsPane, ThumbImg } from '@embedpdf/plugin-thumbnail/vue';
-import { PrintPluginPackage } from '@embedpdf/plugin-print';
-import { PrintFrame } from '@embedpdf/plugin-print/vue';
-import { ExportPluginPackage } from '@embedpdf/plugin-export';
-import { Download } from '@embedpdf/plugin-export/vue';
-
-// 子组件
-import PdfToolbar from './PdfToolbar.vue';
-
-const props = defineProps<{
-  pdfSrc: string;
-}>();
-
-// 初始化 PDF 引擎
-const { engine, isLoading: engineLoading } = usePdfiumEngine();
-
-// 缩略图侧边栏状态
-const showThumbnails = ref(false);
-
-// 为每次 PDF 变化生成唯一 key
-const pdfKey = ref(0);
-watch(() => props.pdfSrc, () => {
-  pdfKey.value++;
-});
-
-// 注册插件
-const plugins = computed(() => [
-  createPluginRegistration(LoaderPluginPackage, {
-    loadingOptions: {
-      type: 'url',
-      pdfFile: {
-        id: `invoice-pdf-${pdfKey.value}`,
-        url: props.pdfSrc,
-      },
-    },
-  }),
-  createPluginRegistration(ViewportPluginPackage),
-  createPluginRegistration(ScrollPluginPackage),
-  createPluginRegistration(RenderPluginPackage),
-  createPluginRegistration(ZoomPluginPackage, {
-    defaultZoomLevel: 1.0,
-  }),
-  createPluginRegistration(ThumbnailPluginPackage, {
-    width: 120,
-  }),
-  createPluginRegistration(PrintPluginPackage),
-  createPluginRegistration(ExportPluginPackage, {
-    defaultFileName: 'merged-invoices.pdf',
-  }),
-]);
-</script>
-
 <template>
   <div class="pdf-viewer-container">
     <!-- 加载状态 -->
@@ -88,18 +18,26 @@ const plugins = computed(() => [
       <div class="pdf-content">
         <!-- 缩略图侧边栏 -->
         <div
+          ref="thumbnailsSidebarRef"
           class="thumbnails-sidebar"
-          :class="{ 'show': showThumbnails }"
+          :class="{ show: showThumbnails }"
+          @mouseenter="onThumbnailsMouseEnter"
+          @scroll="onThumbnailsScroll"
+          @wheel="onThumbnailsScroll"
         >
           <ThumbnailsPane class="thumbnails-pane">
             <template #default="{ meta }">
               <div
                 class="thumbnail-item"
+                :class="{ active: meta.pageIndex === currentPage }"
                 :style="{
                   position: 'absolute',
                   top: `${meta.top}px`,
-                  height: `${meta.wrapperHeight}px`,
+                  left: '12px',
+                  right: '12px',
+                  height: `${meta.height + meta.labelHeight + 16}px`,
                 }"
+                @click="handleThumbnailClick(meta.pageIndex)"
               >
                 <ThumbImg :meta="meta" class="thumbnail-img" />
                 <span class="thumbnail-label">{{ meta.pageIndex + 1 }}</span>
@@ -130,9 +68,209 @@ const plugins = computed(() => [
       <PrintFrame />
       <!-- 下载用的隐藏组件 -->
       <Download />
+
+      <!-- 使用 composable 获取滚动能力 -->
+      <ScrollWatcher
+        @page-change="onPageChange"
+        @scroll-ready="onScrollReady"
+        @thumbnail-ready="onThumbnailReady"
+      />
     </EmbedPDF>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed, watch, ref, defineComponent, h, onMounted } from "vue";
+import { usePdfiumEngine } from "@embedpdf/engines/vue";
+import { EmbedPDF, useCapability } from "@embedpdf/core/vue";
+import { createPluginRegistration } from "@embedpdf/core";
+
+// 核心插件
+import { ViewportPluginPackage } from "@embedpdf/plugin-viewport";
+import { Viewport } from "@embedpdf/plugin-viewport/vue";
+import { ScrollPluginPackage, ScrollPlugin } from "@embedpdf/plugin-scroll";
+import type { ScrollCapability } from "@embedpdf/plugin-scroll";
+import { Scroller } from "@embedpdf/plugin-scroll/vue";
+import { LoaderPluginPackage } from "@embedpdf/plugin-loader";
+import { RenderPluginPackage } from "@embedpdf/plugin-render";
+import { RenderLayer } from "@embedpdf/plugin-render/vue";
+
+// 功能插件
+import { ZoomPluginPackage } from "@embedpdf/plugin-zoom";
+import {
+  ThumbnailPluginPackage,
+  ThumbnailPlugin,
+} from "@embedpdf/plugin-thumbnail";
+import type { ThumbnailCapability } from "@embedpdf/plugin-thumbnail";
+import { ThumbnailsPane, ThumbImg } from "@embedpdf/plugin-thumbnail/vue";
+import { PrintPluginPackage } from "@embedpdf/plugin-print";
+import { PrintFrame } from "@embedpdf/plugin-print/vue";
+import { ExportPluginPackage } from "@embedpdf/plugin-export";
+import { Download } from "@embedpdf/plugin-export/vue";
+
+// 子组件
+import PdfToolbar from "./PdfToolbar.vue";
+
+// 内部组件：用于在 EmbedPDF 上下文中使用 useCapability
+const ScrollWatcher = defineComponent({
+  name: "ScrollWatcher",
+  emits: ["page-change", "scroll-ready", "thumbnail-ready"],
+  setup(_, { emit }) {
+    const { provides: scrollCapability } = useCapability<ScrollPlugin>(
+      ScrollPlugin.id
+    );
+    const { provides: thumbnailCapability } = useCapability<ThumbnailPlugin>(
+      ThumbnailPlugin.id
+    );
+
+    watch(
+      () => scrollCapability.value,
+      (cap) => {
+        if (cap) {
+          emit("scroll-ready", cap);
+          cap.onPageChange((payload) => {
+            emit("page-change", payload.pageNumber - 1);
+          });
+        }
+      },
+      { immediate: true }
+    );
+
+    watch(
+      () => thumbnailCapability.value,
+      (cap) => {
+        if (cap) {
+          emit("thumbnail-ready", cap);
+        }
+      },
+      { immediate: true }
+    );
+
+    return () => null;
+  },
+});
+
+const props = defineProps<{
+  pdfSrc: string;
+}>();
+
+// 初始化 PDF 引擎
+const { engine, isLoading: engineLoading } = usePdfiumEngine();
+
+// 缩略图侧边栏状态
+const showThumbnails = ref(false);
+
+// 缩略图侧边栏 ref
+const thumbnailsSidebarRef = ref<HTMLElement | null>(null);
+
+// 当前页码
+const currentPage = ref(0);
+
+// 滚动能力引用
+let scrollCap: ScrollCapability | null = null;
+let thumbnailCap: ThumbnailCapability | null = null;
+
+// 是否正在同步
+const isSyncing = ref(false);
+
+// 用户是否在手动滚动缩略图（防止反弹）
+const isUserScrollingThumbnails = ref(false);
+let userScrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 滚动能力就绪
+const onScrollReady = (cap: ScrollCapability) => {
+  scrollCap = cap;
+};
+
+// 缩略图能力就绪
+const onThumbnailReady = (cap: ThumbnailCapability) => {
+  thumbnailCap = cap;
+};
+
+// 页面变化处理
+const onPageChange = (pageIndex: number) => {
+  if (!isSyncing.value) {
+    currentPage.value = pageIndex;
+    // 只有在用户没有手动滚动缩略图时，才自动滚动缩略图
+    if (!isUserScrollingThumbnails.value && thumbnailCap) {
+      thumbnailCap.scrollToThumb(pageIndex);
+    }
+  }
+};
+
+// 用户开始滚动缩略图
+const onThumbnailsScroll = () => {
+  isUserScrollingThumbnails.value = true;
+  // 清除之前的定时器
+  if (userScrollTimer) {
+    clearTimeout(userScrollTimer);
+  }
+  // 用户停止滚动 1 秒后，恢复自动滚动
+  userScrollTimer = setTimeout(() => {
+    isUserScrollingThumbnails.value = false;
+  }, 1000);
+};
+
+// 鼠标进入缩略图区域时，确保它可以滚动
+const onThumbnailsMouseEnter = () => {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+};
+
+// 点击缩略图
+const handleThumbnailClick = (pageIndex: number) => {
+  if (scrollCap) {
+    isSyncing.value = true;
+    currentPage.value = pageIndex;
+    scrollCap.scrollToPage({
+      pageNumber: pageIndex + 1,
+      behavior: "smooth",
+    });
+    setTimeout(() => {
+      isSyncing.value = false;
+    }, 500);
+  }
+};
+
+// 为每次 PDF 变化生成唯一 key
+const pdfKey = ref(0);
+watch(
+  () => props.pdfSrc,
+  () => {
+    pdfKey.value++;
+    currentPage.value = 0;
+    scrollCap = null;
+  }
+);
+
+// 注册插件
+const plugins = computed(() => [
+  createPluginRegistration(LoaderPluginPackage, {
+    loadingOptions: {
+      type: "url",
+      pdfFile: {
+        id: `invoice-pdf-${pdfKey.value}`,
+        url: props.pdfSrc,
+      },
+    },
+  }),
+  createPluginRegistration(ViewportPluginPackage),
+  createPluginRegistration(ScrollPluginPackage),
+  createPluginRegistration(RenderPluginPackage),
+  createPluginRegistration(ZoomPluginPackage, {
+    defaultZoomLevel: 1.0,
+  }),
+  createPluginRegistration(ThumbnailPluginPackage, {
+    width: 120,
+    autoScroll: false, // 禁用自动滚动，防止反弹
+  }),
+  createPluginRegistration(PrintPluginPackage),
+  createPluginRegistration(ExportPluginPackage, {
+    defaultFileName: "merged-invoices.pdf",
+  }),
+]);
+</script>
 
 <style scoped>
 .pdf-viewer-container {
@@ -165,7 +303,9 @@ const plugins = computed(() => [
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 主内容区 */
@@ -186,13 +326,13 @@ const plugins = computed(() => [
 
 .thumbnails-sidebar.show {
   width: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .thumbnails-pane {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  padding: 12px;
   position: relative;
 }
 
@@ -202,9 +342,10 @@ const plugins = computed(() => [
   align-items: center;
   padding: 8px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.15s ease;
-  width: 100%;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  border: 2px solid transparent;
+  background-color: transparent;
   box-sizing: border-box;
 }
 
@@ -212,16 +353,33 @@ const plugins = computed(() => [
   background-color: #3f4447;
 }
 
+.thumbnail-item.active {
+  background-color: rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+}
+
+.thumbnail-item.active .thumbnail-img {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.thumbnail-item.active .thumbnail-label {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
 .thumbnail-img {
   border: 1px solid #4b5563;
   border-radius: 2px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
 }
 
 .thumbnail-label {
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 6px;
+  font-size: 12px;
   color: #9ca3af;
+  font-weight: 500;
 }
 
 /* PDF 视图区 */
