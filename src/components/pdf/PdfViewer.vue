@@ -160,7 +160,7 @@ const props = defineProps<{
   pdfSrc: string;
 }>();
 
-// 初始化 PDF 引擎
+// 初始化 PDF 引擎（由 usePdfiumEngine 自动管理）
 const { engine, isLoading: engineLoading } = usePdfiumEngine();
 
 // 缩略图侧边栏状态
