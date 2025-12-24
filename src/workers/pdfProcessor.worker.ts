@@ -1,12 +1,40 @@
 /**
  * PDF 处理 Web Worker
  * 将 CPU 密集型的 PDF 处理任务移到后台线程，避免阻塞主线程
- * 注意：Worker 内部使用 pdfjs 时需禁用嵌套 Worker（disableWorker: true）
+ * 使用 unpdf 的 serverless 构建，无需额外 Worker
  */
 
 import { PDFDocument, rgb } from "pdf-lib";
-import * as pdfjs from "pdfjs-dist";
+import { getDocumentProxy, getResolvedPDFJS } from "unpdf";
 import jsQR from "jsqr";
+
+/**
+ * OffscreenCanvas 工厂类
+ * PDF.js 默认使用 DOMCanvasFactory（依赖 document），在 Worker 中不可用
+ * 此类使用 OffscreenCanvas 替代，使 PDF.js 渲染在 Worker 中正常工作
+ */
+class OffscreenCanvasFactory {
+  create(width: number, height: number) {
+    const canvas = new OffscreenCanvas(width, height);
+    const context = canvas.getContext("2d");
+    return { canvas, context };
+  }
+
+  reset(canvasAndContext: { canvas: OffscreenCanvas; context: OffscreenCanvasRenderingContext2D | null }, width: number, height: number) {
+    canvasAndContext.canvas.width = width;
+    canvasAndContext.canvas.height = height;
+  }
+
+  destroy(canvasAndContext: { canvas: OffscreenCanvas; context: OffscreenCanvasRenderingContext2D | null }) {
+    canvasAndContext.canvas.width = 0;
+    canvasAndContext.canvas.height = 0;
+    (canvasAndContext as any).canvas = null;
+    (canvasAndContext as any).context = null;
+  }
+}
+
+// 单例 canvas 工厂
+const canvasFactory = new OffscreenCanvasFactory();
 
 // 配置常量
 const QR_REGION_RATIO = 0.38;
@@ -167,11 +195,8 @@ async function processFiles(
 async function extractInvoiceData(pageData: PageData): Promise<InvoiceCell> {
   const { arrayBuffer, sourceFile, pageIndex } = pageData;
 
-  // 使用 pdfjs 加载文档（Worker 内部禁用嵌套 Worker）
-  const pdfjsDoc = await pdfjs.getDocument({
-    data: arrayBuffer,
-    disableWorker: true,
-  } as any).promise;
+  // 使用 unpdf 加载文档（serverless 构建，无需额外 Worker）
+  const pdfjsDoc = await getDocumentProxy(new Uint8Array(arrayBuffer));
   const pdfjsPage = await pdfjsDoc.getPage(1);
 
   // 尝试扫描 QR 码
@@ -221,7 +246,7 @@ async function scanQRCodeOnce(pdfjsPage: any, scale: number): Promise<string | n
     throw new Error("无法获取 OffscreenCanvas 2D 上下文");
   }
 
-  await pdfjsPage.render({ canvasContext: context, viewport }).promise;
+  await pdfjsPage.render({ canvasContext: context, viewport, canvasFactory }).promise;
 
   // 裁剪 QR 码区域（左上角）
   const scanWidth = Math.floor(canvas.width * QR_REGION_RATIO);
