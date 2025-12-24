@@ -230,11 +230,7 @@ import BatchActionBar from "../components/ui/BatchActionBar.vue";
 import PdfViewer from "../components/pdf/PdfViewer.vue";
 import PdfEnginePreloader from "../components/pdf/PdfEnginePreloader.vue";
 import { getInvoiceType } from "../utils/invoiceUtils";
-// Worker 处理（主线程不阻塞）
-import {
-  processFilesInWorker,
-  isWorkerAvailable,
-} from "../workers";
+
 // 降级方案：主线程处理
 import {
   processFiles,
@@ -379,71 +375,45 @@ const handleMergePDFs = async (): Promise<void> => {
 
     console.log(`处理 ${files.length} 张发票`);
 
-    // 优先使用 Worker（不阻塞主线程）
-    if (isWorkerAvailable()) {
-      console.log("[Worker] 使用 Web Worker 处理");
+    // 解析 PDF 页面
+    progress.value = 30;
+    const allPages = await processFiles(files);
 
-      const result = await processFilesInWorker(files, {
-        onProgress: (p) => {
-          progress.value = p;
-        },
-        onInvoice: (invoice) => {
-          // 流式显示：每处理完一张发票立即显示
-          cells.value = [...cells.value, invoice];
-        },
-      });
+    // 提取发票信息
+    progress.value = 60;
+    const invoiceData = await extractInvoiceData(allPages);
 
-      displayPDF(result.pdfBlob);
-      progress.value = 100;
+    // 合并所有页面
+    progress.value = 80;
+    const mergedPdf = await createMergedDocument(allPages, {
+      pagesPerSheet: 2,
+      targetPageSize: { width: 595.28, height: 841.89 },
+      scale: 0.95,
+    });
 
-      // 发票处理完成后，更新统计数量
-      if (files.length > 0) {
-        await updateInvoiceCount(files.length);
-      }
-    } else {
-      // 降级：主线程处理（会阻塞 UI）
-      console.log("[MainThread] Worker 不可用，使用主线程处理");
-      await handleMergePDFsMainThread();
+    const pdfBytes = await mergedPdf.save({ updateFieldAppearances: false });
+    const pdfBlob = new Blob([new Uint8Array(pdfBytes)], {
+      type: "application/pdf",
+    });
+
+    displayPDF(pdfBlob);
+
+    // 显示发票列表
+    cells.value = invoiceData;
+
+    progress.value = 100;
+
+    // 发票处理完成后，更新统计数量（不阻塞 UI）
+    if (files.length > 0) {
+      updateInvoiceCount(files.length).catch((e) =>
+        console.error("后台更新统计失败:", e)
+      );
     }
   } catch (err: any) {
     error.value = err.message || "处理过程中发生错误";
     console.error("PDF处理错误:", err);
   } finally {
-    setTimeout(() => (isProcessing.value = false), 500);
-  }
-};
-
-// 主线程处理（降级方案）
-const handleMergePDFsMainThread = async (): Promise<void> => {
-  const files = selectedFiles.value;
-
-  const allPages = await processFiles(files);
-  progress.value = 30;
-
-  const invoiceData = await extractInvoiceData(allPages);
-  progress.value = 60;
-
-  // 合并所有页面
-  const mergedPdf = await createMergedDocument(allPages, {
-    pagesPerSheet: 2,
-    targetPageSize: { width: 595.28, height: 841.89 },
-    scale: 0.95,
-  });
-  progress.value = 90;
-
-  const pdfBytes = await mergedPdf.save({ updateFieldAppearances: false });
-  const pdfBlob = new Blob([new Uint8Array(pdfBytes)], {
-    type: "application/pdf",
-  });
-
-  cells.value = invoiceData;
-  console.log(`PDF size: ${(pdfBlob.size / (1024 * 1024)).toFixed(2)} MB`);
-  displayPDF(pdfBlob);
-  progress.value = 100;
-
-  // 发票处理完成后，更新统计数量
-  if (files.length > 0) {
-    await updateInvoiceCount(files.length);
+    isProcessing.value = false;
   }
 };
 
@@ -477,8 +447,13 @@ const fetchInvoiceCount = async (): Promise<void> => {
   }
 };
 
-// 更新发票处理数量
+// 更新发票处理数量（仅生产环境上报）
 const updateInvoiceCount = async (count: number): Promise<void> => {
+  // 非生产环境不上报
+  if (!import.meta.env.PROD) {
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/stats/invoice-count`, {
       method: "POST",
@@ -554,5 +529,4 @@ function openPdfPreview() {
 .cell-list-move {
   transition: transform 0.5s ease; /* 确保移动动画一致 */
 }
-
 </style>

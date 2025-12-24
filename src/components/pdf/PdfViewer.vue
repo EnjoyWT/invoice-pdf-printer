@@ -183,8 +183,12 @@ let thumbnailCap: ThumbnailCapability | null = null;
 const isSyncing = ref(false);
 
 // 用户是否在手动滚动缩略图（防止反弹）
+// 用户是否在手动滚动缩略图（防止反弹）
 const isUserScrollingThumbnails = ref(false);
+// 标记是否是程序导致的滚动（防止触发手动滚动检测）
+const isProgrammaticScrolling = ref(false);
 let userScrollTimer: ReturnType<typeof setTimeout> | null = null;
+let programmaticScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 滚动能力就绪
 const onScrollReady = (cap: ScrollCapability) => {
@@ -202,18 +206,34 @@ const onTotalPages = (pages: number) => {
 };
 
 // 页面变化处理
+// 页面变化处理
 const onPageChange = (pageIndex: number) => {
   if (!isSyncing.value) {
-    currentPage.value = pageIndex;
+    if (currentPage.value !== pageIndex) {
+      currentPage.value = pageIndex;
+    }
+
     // 只有在用户没有手动滚动缩略图时，才自动滚动缩略图
     if (!isUserScrollingThumbnails.value && thumbnailCap) {
+      // 标记为程序滚动，防止触发 onThumbnailsScroll 的用户滚动检测
+      isProgrammaticScrolling.value = true;
+      if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+
       thumbnailCap.scrollToThumb(pageIndex);
+
+      // 设置短暂延迟重置标记，等待滚动事件结束
+      programmaticScrollTimer = setTimeout(() => {
+        isProgrammaticScrolling.value = false;
+      }, 200);
     }
   }
 };
 
 // 用户开始滚动缩略图
 const onThumbnailsScroll = () => {
+  // 如果是程序导致的滚动，忽略
+  if (isProgrammaticScrolling.value) return;
+
   isUserScrollingThumbnails.value = true;
   // 清除之前的定时器
   if (userScrollTimer) {
