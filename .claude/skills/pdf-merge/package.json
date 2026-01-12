@@ -1,0 +1,18 @@
+{
+  "name": "pdf-merge-invoices",
+  "version": "1.0.0",
+  "description": "独立的发票 PDF 合并工具",
+  "main": "scripts/merge-invoices.ts",
+  "scripts": {
+    "merge": "ts-node scripts/merge-invoices.ts"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}

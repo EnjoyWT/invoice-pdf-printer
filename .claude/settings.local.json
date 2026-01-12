@@ -17,7 +17,11 @@
       "Bash(git tag:*)",
       "Bash(git push:*)",
       "Bash(pnpm remove:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(node -e:*)"
     ]
   }
 }
