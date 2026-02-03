@@ -25,17 +25,21 @@ export default {
 
       const reader = new FileReader();
       // 读取文件内容
-      const fileContents: ArrayBuffer | string | null = await new Promise((resolve, reject) => {
-        reader.onload = function (e) {
-          resolve(e.target?.result || null);
-        };
-        reader.onerror = function (e) {
-          reject(new Error("文件读取错误。"));
-        };
-        reader.readAsArrayBuffer(file);
-      });
+      const fileContents: ArrayBuffer | string | null = await new Promise(
+        (resolve, reject) => {
+          reader.onload = function (e) {
+            resolve(e.target?.result || null);
+          };
+          reader.onerror = function (e) {
+            reject(new Error("文件读取错误。"));
+          };
+          reader.readAsArrayBuffer(file);
+        },
+      );
       // 将PDF文件添加到合并的PDF文档中
-      const pdf: PDFDocument = await PDFDocument.load(fileContents as ArrayBuffer);
+      const pdf: PDFDocument = await PDFDocument.load(
+        fileContents as ArrayBuffer,
+      );
 
       const firstPage: PDFPage = pdf.getPages()[0];
     },

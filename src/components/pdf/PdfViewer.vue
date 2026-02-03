@@ -119,10 +119,10 @@ const ScrollWatcher = defineComponent({
   emits: ["page-change", "scroll-ready", "thumbnail-ready", "total-pages"],
   setup(_, { emit }) {
     const { provides: scrollCapability } = useCapability<ScrollPlugin>(
-      ScrollPlugin.id
+      ScrollPlugin.id,
     );
     const { provides: thumbnailCapability } = useCapability<ThumbnailPlugin>(
-      ThumbnailPlugin.id
+      ThumbnailPlugin.id,
     );
 
     watch(
@@ -139,7 +139,7 @@ const ScrollWatcher = defineComponent({
           });
         }
       },
-      { immediate: true }
+      { immediate: true },
     );
 
     watch(
@@ -149,7 +149,7 @@ const ScrollWatcher = defineComponent({
           emit("thumbnail-ready", cap);
         }
       },
-      { immediate: true }
+      { immediate: true },
     );
 
     return () => null;
@@ -275,7 +275,7 @@ watch(
     pdfKey.value++;
     currentPage.value = 0;
     scrollCap = null;
-  }
+  },
 );
 
 // 注册插件

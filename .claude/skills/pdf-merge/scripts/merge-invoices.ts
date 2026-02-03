@@ -98,7 +98,7 @@ function extractAmount(text: string): string {
 
   // 策略3: 匹配大写金额并转换
   const chineseAmountMatch = text.match(
-    /([零壹贰叁肆伍陆柒捌玖拾佰仟万亿]+圆[零壹贰叁肆伍陆柒捌玖角分整]+)/
+    /([零壹贰叁肆伍陆柒捌玖拾佰仟万亿]+圆[零壹贰叁肆伍陆柒捌玖角分整]+)/,
   );
   if (chineseAmountMatch) {
     const converted = convertChineseAmount(chineseAmountMatch[1]);
@@ -112,11 +112,23 @@ function extractAmount(text: string): string {
 
 function convertChineseAmount(chinese: string): number {
   const digitMap: Record<string, number> = {
-    零: 0, 壹: 1, 贰: 2, 叁: 3, 肆: 4,
-    伍: 5, 陆: 6, 柒: 7, 捌: 8, 玖: 9,
+    零: 0,
+    壹: 1,
+    贰: 2,
+    叁: 3,
+    肆: 4,
+    伍: 5,
+    陆: 6,
+    柒: 7,
+    捌: 8,
+    玖: 9,
   };
   const unitMap: Record<string, number> = {
-    拾: 10, 佰: 100, 仟: 1000, 万: 10000, 亿: 100000000,
+    拾: 10,
+    佰: 100,
+    仟: 1000,
+    万: 10000,
+    亿: 100000000,
   };
 
   let result = 0;
@@ -173,10 +185,7 @@ function extractDate(text: string): string {
 }
 
 function extractInvoiceNumber(text: string): string {
-  const patterns = [
-    /发票号码[：:]\s*(\d{8,20})/i,
-    /No[.:：]\s*(\d{8,20})/i,
-  ];
+  const patterns = [/发票号码[：:]\s*(\d{8,20})/i, /No[.:：]\s*(\d{8,20})/i];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -191,7 +200,7 @@ function extractInvoiceNumber(text: string): string {
 
 interface PageData {
   doc: PDFDocument;
-  page: PDFPage;          // 处理后的页面（已裁剪）
+  page: PDFPage; // 处理后的页面（已裁剪）
   pageIndex: number;
   width: number;
   height: number;
@@ -288,7 +297,7 @@ async function loadPdfPages(filePaths: string[]): Promise<PageData[]> {
 
 function extractInvoiceInfo(
   pageData: PageData,
-  pageNumber: number
+  pageNumber: number,
 ): InvoiceInfo {
   const text = pageData.text || "";
 
@@ -314,7 +323,7 @@ function calculateScale(
   srcWidth: number,
   srcHeight: number,
   targetWidth: number,
-  targetHeight: number
+  targetHeight: number,
 ): ScaleResult {
   const margin = Math.min(targetWidth, targetHeight) * 0.02;
   const availableWidth = targetWidth - margin * 2;
@@ -356,7 +365,7 @@ async function createMergedPdf(pages: PageData[]): Promise<Uint8Array> {
           pageData.width,
           pageData.height,
           A4_SIZE.width,
-          halfHeight
+          halfHeight,
         );
 
         const yOffset = j === 0 ? halfHeight : 0;
@@ -392,9 +401,13 @@ async function createMergedPdf(pages: PageData[]): Promise<Uint8Array> {
 // ============ 主函数 ============
 
 export async function mergeInvoices(
-  options: MergeInvoicesOptions
+  options: MergeInvoicesOptions,
 ): Promise<MergeInvoicesResult> {
-  const { inputPaths, outputPath, extractAmount: shouldExtract = false } = options;
+  const {
+    inputPaths,
+    outputPath,
+    extractAmount: shouldExtract = false,
+  } = options;
 
   if (!inputPaths || inputPaths.length === 0) {
     throw new Error("请提供至少一个发票文件路径");
@@ -493,7 +506,7 @@ async function main() {
       console.log(`\n发票信息:`);
       result.invoices.forEach((inv) => {
         console.log(
-          `  ${inv.pageNumber}. ${inv.fileName} - ${inv.type} - ¥${inv.amount} - ${inv.date}`
+          `  ${inv.pageNumber}. ${inv.fileName} - ${inv.type} - ¥${inv.amount} - ${inv.date}`,
         );
       });
       console.log(`\n总金额: ¥${result.totalAmount?.toFixed(2)}`);

@@ -2,7 +2,7 @@ name: Deploy Web & Build Desktop (Mac/Win)
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 # 必须添加权限，否则最后一步上传 Release 会报 403 错误
 permissions:
@@ -76,7 +76,7 @@ jobs:
           pake "$APP_URL" --name "$APP_NAME" 
           # 整理文件
           mkdir release_assets
-          
+
           # 分开移动文件以防止报错
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv *.msi release_assets/ 2>/dev/null || true

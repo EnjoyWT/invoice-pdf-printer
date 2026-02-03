@@ -17,19 +17,21 @@ description: 合并多张电子发票 PDF 为一个文件，支持 A4 双联排�
 
 ```typescript
 interface MergeInvoicesOptions {
-  inputPaths: string[];      // 必须：发票 PDF 文件路径数组
-  outputPath?: string;       // 可选：输出路径，默认生成临时路径
-  extractAmount?: boolean;   // 可选：是否提取金额，默认 false
+  inputPaths: string[]; // 必须：发票 PDF 文件路径数组
+  outputPath?: string; // 可选：输出路径，默认生成临时路径
+  extractAmount?: boolean; // 可选：是否提取金额，默认 false
 }
 
 interface MergeInvoicesResult {
-  outputPath: string;        // 合并后的 PDF 路径
-  invoices?: InvoiceInfo[];  // 发票信息（如果 extractAmount 为 true）
-  totalAmount?: number;      // 总金额（如果 extractAmount 为 true）
-  totalPages: number;        // 合并后的总页数
+  outputPath: string; // 合并后的 PDF 路径
+  invoices?: InvoiceInfo[]; // 发票信息（如果 extractAmount 为 true）
+  totalAmount?: number; // 总金额（如果 extractAmount 为 true）
+  totalPages: number; // 合并后的总页数
 }
 
-async function mergeInvoices(options: MergeInvoicesOptions): Promise<MergeInvoicesResult>
+async function mergeInvoices(
+  options: MergeInvoicesOptions,
+): Promise<MergeInvoicesResult>;
 ```
 
 ## 使用方式
@@ -59,17 +61,17 @@ npx ts-node scripts/merge-invoices.ts -o ~/Desktop/merged.pdf -e ~/invoices/*.pd
 ### 方式二：作为模块导入
 
 ```typescript
-import { mergeInvoices } from './.claude/skills/pdf-merge/scripts/merge-invoices';
+import { mergeInvoices } from "./.claude/skills/pdf-merge/scripts/merge-invoices";
 
 const result = await mergeInvoices({
-  inputPaths: ['invoice1.pdf', 'invoice2.pdf'],
-  outputPath: './merged.pdf',
+  inputPaths: ["invoice1.pdf", "invoice2.pdf"],
+  outputPath: "./merged.pdf",
   extractAmount: true,
 });
 
-console.log(result.outputPath);     // 输出路径
-console.log(result.totalAmount);    // 总金额
-console.log(result.invoices);       // 各发票详情
+console.log(result.outputPath); // 输出路径
+console.log(result.totalAmount); // 总金额
+console.log(result.invoices); // 各发票详情
 ```
 
 ## 输出示例
@@ -102,10 +104,10 @@ console.log(result.invoices);       // 各发票详情
 
 ## 依赖
 
-| 库 | 版本 | 用途 |
-|---|------|------|
-| pdf-lib | ^1.17.1 | PDF 合并、布局 |
-| pdf-parse | ^1.1.1 | 提取 PDF 文本 |
+| 库        | 版本    | 用途           |
+| --------- | ------- | -------------- |
+| pdf-lib   | ^1.17.1 | PDF 合并、布局 |
+| pdf-parse | ^1.1.1  | 提取 PDF 文本  |
 
 ## 限制
 

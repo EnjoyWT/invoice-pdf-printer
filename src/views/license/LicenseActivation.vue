@@ -10,9 +10,9 @@
 
     <div class="license-container">
       <!-- 右上角提示三角 -->
-      <div 
-        class="help-trigger" 
-        :class="{ 'active': showQrCode }"
+      <div
+        class="help-trigger"
+        :class="{ active: showQrCode }"
         @click="toggleQrCode"
       >
         <div class="triangle-hint">
@@ -21,9 +21,9 @@
       </div>
 
       <!-- 二维码覆盖层 -->
-      <div 
-        class="qr-overlay" 
-        :class="{ 'show': showQrCode }"
+      <div
+        class="qr-overlay"
+        :class="{ show: showQrCode }"
         @click="toggleQrCode"
       >
         <div class="qr-content" @click.stop>
@@ -33,14 +33,18 @@
           </div>
           <div class="qr-body">
             <div class="qr-code-container">
-              <img 
-                v-if="qrCodeImage" 
-                :src="qrCodeImage" 
-                alt="联系客服" 
-                class="qr-image" 
+              <img
+                v-if="qrCodeImage"
+                :src="qrCodeImage"
+                alt="联系客服"
+                class="qr-image"
               />
-              <div v-else class="qr-placeholder">  
-               <img src="@/assets/qr-contact.png" alt="联系客服" class="qr-image" />
+              <div v-else class="qr-placeholder">
+                <img
+                  src="@/assets/qr-contact.png"
+                  alt="联系客服"
+                  class="qr-image"
+                />
               </div>
               <p class="qr-tip">扫描二维码联系客服获取授权码</p>
             </div>
@@ -79,9 +83,9 @@
 
         <button
           class="verify-btn"
-          :class="{ 
-            'verifying': isVerifying,
-            'success': verifySuccess 
+          :class="{
+            verifying: isVerifying,
+            success: verifySuccess,
           }"
           :style="buttonStyle"
           :disabled="!licenseKey.trim() || isVerifying"
@@ -112,8 +116,10 @@
         <div class="expired-content">
           <div class="expired-icon">⏰</div>
           <h3 class="expired-title">授权码已过期</h3>
-          <p class="expired-desc">您的授权码已过期，请联系管理员获取新的授权码</p>
-          
+          <p class="expired-desc">
+            您的授权码已过期，请联系管理员获取新的授权码
+          </p>
+
           <div class="contact-actions">
             <button class="contact-btn" @click="showQrCode = true">
               <i>📞</i>
@@ -127,130 +133,131 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 // import { ElMessage } from 'element-plus' // 如果使用 Element Plus
 // import { useLicense } from '@/composables/useLicense' // 自定义 composable
 // 路由
-const router = useRouter()
+const router = useRouter();
 
 // 响应式数据
-const licenseKey = ref('')
-const isVerifying = ref(false)
-const errorMessage = ref('')
-const showExpiredMessage = ref(false)
-const showQrCode = ref(false)
-const verifySuccess = ref(false)
-const qrCodeImage = ref('') // 二维码图片路径
+const licenseKey = ref("");
+const isVerifying = ref(false);
+const errorMessage = ref("");
+const showExpiredMessage = ref(false);
+const showQrCode = ref(false);
+const verifySuccess = ref(false);
+const qrCodeImage = ref(""); // 二维码图片路径
 
 // 计算属性 - 按钮样式
 const buttonStyle = computed(() => {
   if (verifySuccess.value) {
     return {
-      background: 'linear-gradient(135deg, #10b981, #059669)'
-    }
+      background: "linear-gradient(135deg, #10b981, #059669)",
+    };
   }
-  return {}
-})
+  return {};
+});
 
 // 检查是否为开发环境
-const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env?.DEV
+const isDevelopment =
+  process.env.NODE_ENV === "development" || import.meta.env?.DEV;
 
 // 切换二维码显示
 const toggleQrCode = () => {
-  showQrCode.value = !showQrCode.value
-}
+  showQrCode.value = !showQrCode.value;
+};
 
 // 隐藏错误信息
 const hideError = () => {
   if (errorMessage.value) {
-    errorMessage.value = ''
-    showExpiredMessage.value = false
+    errorMessage.value = "";
+    showExpiredMessage.value = false;
   }
-}
+};
 
 // 显示错误信息
 const showError = (message) => {
-  errorMessage.value = message
-  showExpiredMessage.value = false
-}
+  errorMessage.value = message;
+  showExpiredMessage.value = false;
+};
 
 // 显示过期提示
 const showExpiredAlert = () => {
-  errorMessage.value = ''
-  showExpiredMessage.value = true
-}
+  errorMessage.value = "";
+  showExpiredMessage.value = true;
+};
 
 // 验证授权码
 const verifyLicenseKey = async () => {
-  const key = licenseKey.value.trim()
-  
+  const key = licenseKey.value.trim();
+
   if (!key) {
-    showError('请输入授权码')
-    return
+    showError("请输入授权码");
+    return;
   }
 
-  if (isVerifying.value) return
+  if (isVerifying.value) return;
 
-  isVerifying.value = true
-  errorMessage.value = ''
-  verifySuccess.value = false
+  isVerifying.value = true;
+  errorMessage.value = "";
+  verifySuccess.value = false;
 
   try {
     // 轻微loading效果
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // 调用主进程真实验证（验证成功会被主进程持久化到本地）
-    const result = await window.electronAPI.verifyLicense(key)
-    
+    const result = await window.electronAPI.verifyLicense(key);
+
     if (result.valid) {
-      verifySuccess.value = true
-      
+      verifySuccess.value = true;
+
       // 显示成功消息（如果使用 Element Plus）
       // ElMessage.success('授权验证成功！')
-      
+
       // 延迟跳转
       setTimeout(() => {
-        router.push('/')
-      }, 1500)
+        router.push("/");
+      }, 1500);
     } else {
-      if (result.reason === 'expired' || result.reason.includes('过期')) {
-        showExpiredAlert()
+      if (result.reason === "expired" || result.reason.includes("过期")) {
+        showExpiredAlert();
       } else {
-        showError(result.reason || '授权码验证失败，请检查后重试')
+        showError(result.reason || "授权码验证失败，请检查后重试");
       }
     }
   } catch (error) {
-    showError(error.message || '验证过程发生错误，请重试')
-    console.error('授权验证错误:', error)
+    showError(error.message || "验证过程发生错误，请重试");
+    console.error("授权验证错误:", error);
   } finally {
-    isVerifying.value = false
+    isVerifying.value = false;
   }
-}
+};
 
 // mock 验证逻辑已移除，改为调用主进程接口
 
 // 实际的授权验证函数（需要根据具体API调整）
 const actualVerifyLicense = async (key) => {
   try {
-    const response = await fetch('/api/verify-license', {
-      method: 'POST',
+    const response = await fetch("/api/verify-license", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ licenseKey: key })
-    })
-    
+      body: JSON.stringify({ licenseKey: key }),
+    });
+
     if (!response.ok) {
-      throw new Error('网络请求失败')
+      throw new Error("网络请求失败");
     }
-    
-    const data = await response.json()
-    return data
+
+    const data = await response.json();
+    return data;
   } catch (error) {
-    throw new Error('验证服务暂时不可用，请稍后重试')
+    throw new Error("验证服务暂时不可用，请稍后重试");
   }
-}
+};
 
 // 组件挂载时的操作
 onMounted(() => {
@@ -258,14 +265,14 @@ onMounted(() => {
   // 例如：自动检查授权状态
   setTimeout(() => {
     // autoCheckLicense()
-  }, 1000)
-})
+  }, 1000);
+});
 
 // 导出供父组件使用的方法（如果需要）
 defineExpose({
   verifyLicenseKey,
-  toggleQrCode
-})
+  toggleQrCode,
+});
 </script>
 
 <style scoped lang="scss">
@@ -276,22 +283,43 @@ defineExpose({
   align-items: center;
   min-height: 100%;
   min-width: 100%;
-  
+
   /* 蓝色系渐变背景 */
-  background: 
-    linear-gradient(135deg, 
-      rgba(240, 248, 255, 0.95) 0%, 
+  background:
+    linear-gradient(
+      135deg,
+      rgba(240, 248, 255, 0.95) 0%,
       rgba(235, 245, 255, 0.9) 20%,
       rgba(219, 234, 254, 0.85) 40%,
       rgba(191, 219, 254, 0.8) 70%,
       rgba(147, 197, 253, 0.75) 100%
     ),
-    radial-gradient(circle at 20% 50%, rgba(37, 106, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 40% 80%, rgba(96, 165, 250, 0.06) 0%, transparent 50%);
-  
-  background-size: 100% 100%, 800px 800px, 600px 600px, 700px 700px;
-  background-position: center, -200px center, right -100px top, left center bottom;
+    radial-gradient(
+      circle at 20% 50%,
+      rgba(37, 106, 246, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(59, 130, 246, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 80%,
+      rgba(96, 165, 250, 0.06) 0%,
+      transparent 50%
+    );
+
+  background-size:
+    100% 100%,
+    800px 800px,
+    600px 600px,
+    700px 700px;
+  background-position:
+    center,
+    -200px center,
+    right -100px top,
+    left center bottom;
   animation: subtleShift 30s ease-in-out infinite;
   // padding: 20px;
   overflow: hidden;
@@ -313,7 +341,7 @@ defineExpose({
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: 
+      background-image:
         linear-gradient(rgba(37, 106, 246, 0.04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(37, 106, 246, 0.04) 1px, transparent 1px);
       background-size: 50px 50px;
@@ -323,7 +351,12 @@ defineExpose({
     .floating-circle {
       position: absolute;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(147, 197, 253, 0.3) 0%, rgba(219, 234, 254, 0.2) 40%, transparent 70%);
+      background: radial-gradient(
+        circle,
+        rgba(147, 197, 253, 0.3) 0%,
+        rgba(219, 234, 254, 0.2) 40%,
+        transparent 70%
+      );
       animation: elegantFloat 20s infinite ease-in-out;
       backdrop-filter: blur(1px);
 
@@ -355,37 +388,55 @@ defineExpose({
 }
 
 @keyframes subtleShift {
-  0%, 100% { 
-    background-position: center, -200px center, right -100px top, left center bottom;
+  0%,
+  100% {
+    background-position:
+      center,
+      -200px center,
+      right -100px top,
+      left center bottom;
     filter: brightness(1);
   }
-  33% { 
-    background-position: center, 100px 100px, right 50px top 100px, left 50px bottom 50px;
+  33% {
+    background-position:
+      center,
+      100px 100px,
+      right 50px top 100px,
+      left 50px bottom 50px;
     filter: brightness(1.02);
   }
-  66% { 
-    background-position: center, -100px -100px, right -50px top -50px, left -50px bottom -50px;
+  66% {
+    background-position:
+      center,
+      -100px -100px,
+      right -50px top -50px,
+      left -50px bottom -50px;
     filter: brightness(0.98);
   }
 }
 
 @keyframes gridMove {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(50px, 50px); }
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(50px, 50px);
+  }
 }
 
 @keyframes elegantFloat {
-  0%, 100% { 
-    transform: translateY(0) translateX(0) scale(1); 
-    opacity: 0.6; 
+  0%,
+  100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.6;
   }
-  33% { 
-    transform: translateY(-20px) translateX(10px) scale(1.1); 
-    opacity: 0.3; 
+  33% {
+    transform: translateY(-20px) translateX(10px) scale(1.1);
+    opacity: 0.3;
   }
-  66% { 
-    transform: translateY(10px) translateX(-15px) scale(0.9); 
-    opacity: 0.8; 
+  66% {
+    transform: translateY(10px) translateX(-15px) scale(0.9);
+    opacity: 0.8;
   }
 }
 
@@ -395,7 +446,7 @@ defineExpose({
   backdrop-filter: blur(25px) saturate(1.2);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 20px;
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(37, 106, 246, 0.1),
     0 0 0 1px rgba(255, 255, 255, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
@@ -439,7 +490,7 @@ defineExpose({
     border-left: 80px solid transparent;
     border-top: 80px solid #dbeafe;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     .hint-text {
       position: absolute;
       top: -60px;
@@ -495,15 +546,23 @@ defineExpose({
   transform: scale(0.9);
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     right: 0;
     width: 100%;
     height: 100%;
-    background: 
-      radial-gradient(circle at 30% 70%, rgba(147, 197, 253, 0.05) 0%, transparent 50%),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(37, 106, 246, 0.02) 100%);
+    background:
+      radial-gradient(
+        circle at 30% 70%,
+        rgba(147, 197, 253, 0.05) 0%,
+        transparent 50%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.02) 0%,
+        rgba(37, 106, 246, 0.02) 100%
+      );
     border-radius: 20px;
   }
 
@@ -523,7 +582,7 @@ defineExpose({
     border: 1px solid rgba(255, 255, 255, 0.8);
     border-radius: 16px;
     padding: 30px;
-    box-shadow: 
+    box-shadow:
       0 25px 50px -12px rgba(37, 106, 246, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
     max-width: 320px;
@@ -614,7 +673,12 @@ defineExpose({
       transform: translate(-50%, -50%);
       width: 100px;
       height: 100px;
-      background: radial-gradient(circle, rgba(37, 106, 246, 0.2) 0%, rgba(147, 197, 253, 0.1) 50%, transparent 70%);
+      background: radial-gradient(
+        circle,
+        rgba(37, 106, 246, 0.2) 0%,
+        rgba(147, 197, 253, 0.1) 50%,
+        transparent 70%
+      );
       border-radius: 50%;
       animation: gentleGlow 4s ease-in-out infinite alternate;
     }
@@ -640,13 +704,13 @@ defineExpose({
 }
 
 @keyframes gentleGlow {
-  0% { 
-    transform: translate(-50%, -50%) scale(1); 
-    opacity: 0.4; 
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.4;
   }
-  100% { 
-    transform: translate(-50%, -50%) scale(1.05); 
-    opacity: 0.2; 
+  100% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0.2;
   }
 }
 
@@ -682,7 +746,7 @@ defineExpose({
         font-size: 16px;
         background: rgba(255, 255, 255, 0.9);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 
+        box-shadow:
           inset 0 1px 2px rgba(37, 106, 246, 0.03),
           0 1px 3px rgba(37, 106, 246, 0.04);
 
@@ -690,7 +754,7 @@ defineExpose({
           outline: none;
           border-color: #256af6;
           background: rgba(255, 255, 255, 1);
-          box-shadow: 
+          box-shadow:
             inset 0 1px 2px rgba(37, 106, 246, 0.03),
             0 0 0 3px rgba(37, 106, 246, 0.1),
             0 4px 12px rgba(37, 106, 246, 0.08);
@@ -744,7 +808,6 @@ defineExpose({
 
       .btn-icon {
         font-size: 18px;
-
       }
 
       &.loading {
@@ -760,13 +823,18 @@ defineExpose({
     }
 
     &::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.15),
+        transparent
+      );
       transition: left 0.5s ease;
     }
 
@@ -774,7 +842,6 @@ defineExpose({
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(37, 106, 246, 0.35);
       background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-      
 
       &::before {
         left: 100%;
@@ -817,8 +884,12 @@ defineExpose({
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .expired-section {

@@ -78,4 +78,4 @@ const getStatusText = (percentage: number): string => {
 .progress-text.error {
   color: #ef4444;
 }
-</style> 
+</style>

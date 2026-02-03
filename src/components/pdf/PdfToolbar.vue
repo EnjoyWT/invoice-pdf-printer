@@ -161,11 +161,11 @@ const { provides: exportApi } = useExportCapability();
 const isFitPage = ref(false);
 
 const zoomLevel = computed(() =>
-  zoomState.value ? Math.round(zoomState.value.currentZoomLevel * 100) : 100
+  zoomState.value ? Math.round(zoomState.value.currentZoomLevel * 100) : 100,
 );
 
 const fitModeTitle = computed(() =>
-  isFitPage.value ? "适合一页" : "适合页面宽度"
+  isFitPage.value ? "适合一页" : "适合页面宽度",
 );
 
 const handleZoomIn = (e: MouseEvent) => {
@@ -194,7 +194,7 @@ const handlePrint = (e: MouseEvent) => {
     const task = printApi.value.print();
     task.wait(
       () => console.log("Print completed"),
-      (error) => console.error("Print failed:", error)
+      (error) => console.error("Print failed:", error),
     );
   }
 };

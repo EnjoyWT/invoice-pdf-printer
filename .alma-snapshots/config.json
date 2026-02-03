@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "ignorePatterns": [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "*.log"
+  ]
+}

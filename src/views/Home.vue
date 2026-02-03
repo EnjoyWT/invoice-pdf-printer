@@ -26,6 +26,28 @@
               累计 {{ formattedTotalCount }} 张
             </span>
           </div>
+          <!-- 移动端反馈入口 -->
+          <a
+            href="https://yoloxy.featurebase.app/"
+            target="_blank"
+            class="md:hidden p-1 text-gray-400 hover:text-blue-600 transition-colors duration-200"
+            title="意见反馈"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+              />
+            </svg>
+          </a>
         </div>
 
         <!-- 中间：操作按钮 -->
@@ -89,8 +111,10 @@
           </button>
         </div>
 
-        <!-- 右侧：统计信息 (移动端隐藏，空间不足) -->
-        <div class="hidden md:flex items-center justify-end min-w-[200px]">
+        <!-- 右侧：操作与反馈 (桌面端) -->
+        <div
+          class="hidden md:flex items-center justify-end min-w-[240px] space-x-4"
+        >
           <Transition
             enter-active-class="transition ease-out duration-200"
             enter-from-class="opacity-0 translate-y-1"
@@ -103,6 +127,28 @@
               <InvoiceStats :invoices="cells" />
             </div>
           </Transition>
+
+          <a
+            href="https://yoloxy.featurebase.app/"
+            target="_blank"
+            class="flex items-center space-x-1.5 px-3 py-1.5 text-gray-500 hover:text-blue-600 transition-colors duration-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+              />
+            </svg>
+            <span class="text-sm font-medium">反馈</span>
+          </a>
         </div>
       </div>
     </header>
@@ -315,7 +361,7 @@ const confirmDeletions = async (): Promise<void> => {
   try {
     // 从文件列表中移除(倒序删除,避免索引错乱)
     const sortedIndices = Array.from(pendingDeletions.value).sort(
-      (a, b) => b - a
+      (a, b) => b - a,
     );
     sortedIndices.forEach((index) => {
       selectedFiles.value.splice(index, 1);
@@ -406,7 +452,7 @@ const handleMergePDFs = async (): Promise<void> => {
     // 发票处理完成后，更新统计数量（不阻塞 UI）
     if (files.length > 0) {
       updateInvoiceCount(files.length).catch((e) =>
-        console.error("后台更新统计失败:", e)
+        console.error("后台更新统计失败:", e),
       );
     }
   } catch (err: any) {

@@ -1,5 +1,7 @@
 <template>
-  <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 min-h-0">
+  <div
+    class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50 min-h-0"
+  >
     <TransitionGroup name="cell-list" tag="div" class="space-y-3">
       <div
         v-for="(item, index) in invoices"

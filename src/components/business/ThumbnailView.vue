@@ -7,7 +7,9 @@
         class="thumbnail-item"
       >
         <div class="thumbnail-preview">
-          <canvas :ref="(el) => (canvasRefs[index] = el as HTMLCanvasElement | null)"></canvas>
+          <canvas
+            :ref="(el) => (canvasRefs[index] = el as HTMLCanvasElement | null)"
+          ></canvas>
         </div>
         <div class="thumbnail-info">
           <p class="thumbnail-name">{{ file.name }}</p>
@@ -42,7 +44,10 @@ const props = defineProps<{
 
 const canvasRefs: Ref<(HTMLCanvasElement | null)[]> = ref([]);
 
-const renderThumbnail = async (file: File, canvas: HTMLCanvasElement): Promise<void> => {
+const renderThumbnail = async (
+  file: File,
+  canvas: HTMLCanvasElement,
+): Promise<void> => {
   if (!canvas) return;
 
   const arrayBuffer = await file.arrayBuffer();
@@ -67,10 +72,10 @@ watch(
         if (canvasRefs.value[index]) {
           return renderThumbnail(file, canvasRefs.value[index]);
         }
-      })
+      }),
     );
   },
-  { deep: true }
+  { deep: true },
 );
 
 defineEmits(["remove"]);
@@ -149,4 +154,4 @@ defineEmits(["remove"]);
   opacity: 0;
   transform: translateY(30px);
 }
-</style> 
+</style>

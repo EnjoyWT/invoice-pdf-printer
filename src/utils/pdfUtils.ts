@@ -33,7 +33,7 @@ const QR_SCALE_RETRY_CAP = 2.4;
  * 主要的PDF合并函数
  */
 export async function mergePDFs(
-  options: MergePDFOptions
+  options: MergePDFOptions,
 ): Promise<MergePDFResult> {
   const {
     files,
@@ -177,7 +177,7 @@ export async function processFiles(files: File[]): Promise<PdfPageData[]> {
  * 提取发票信息 - 优化版,使用并发处理
  */
 export async function extractInvoiceData(
-  allPages: PdfPageData[]
+  allPages: PdfPageData[],
 ): Promise<InvoiceCell[]> {
   const cellData: InvoiceCell[] = [];
 
@@ -190,7 +190,7 @@ export async function extractInvoiceData(
     const batchResults = await Promise.all(
       batch.map(async (pageData) => {
         return await extractSinglePageData(pageData);
-      })
+      }),
     );
 
     cellData.push(...batchResults);
@@ -203,7 +203,7 @@ export async function extractInvoiceData(
  * 提取单个页面的发票信息
  */
 async function extractSinglePageData(
-  pageData: PdfPageData
+  pageData: PdfPageData,
 ): Promise<InvoiceCell> {
   const { pdfjsPage, pageNumber, sourceFile } = pageData;
 
@@ -325,7 +325,7 @@ async function scanInvoiceQRCode(pdfjsPage: any): Promise<{
 
   const scaleFast = Math.min(
     QR_SCALE_FAST_CAP,
-    getAdaptiveQrScale(pdfjsPage, QR_TARGET_FAST_PX)
+    getAdaptiveQrScale(pdfjsPage, QR_TARGET_FAST_PX),
   );
   timings.scaleFast = scaleFast;
   const fast = await scanInvoiceQRCodeOnce(pdfjsPage, scaleFast);
@@ -337,7 +337,7 @@ async function scanInvoiceQRCode(pdfjsPage: any): Promise<{
 
   const scaleRetry = Math.min(
     QR_SCALE_RETRY_CAP,
-    getAdaptiveQrScale(pdfjsPage, QR_TARGET_RETRY_PX)
+    getAdaptiveQrScale(pdfjsPage, QR_TARGET_RETRY_PX),
   );
   timings.scaleRetry = scaleRetry;
   timings.usedRetry = true;
@@ -361,7 +361,7 @@ function getAdaptiveQrScale(pdfjsPage: any, targetQrPx: number): number {
 
 async function scanInvoiceQRCodeOnce(
   pdfjsPage: any,
-  scale: number
+  scale: number,
 ): Promise<{
   qrData: string | null;
   timings: {
@@ -414,7 +414,7 @@ async function scanInvoiceQRCodeOnce(
     0,
     0,
     scanWidth,
-    scanHeight
+    scanHeight,
   );
   const imageData = cropCtx.getImageData(0, 0, scanWidth, scanHeight);
 
@@ -432,7 +432,7 @@ async function scanInvoiceQRCodeOnce(
  */
 async function extractInvoiceFromText(
   pdfjsPage: any,
-  pageNumber: number
+  pageNumber: number,
 ): Promise<InvoiceCell> {
   try {
     const textContent = await pdfjsPage.getTextContent();
@@ -466,7 +466,7 @@ async function extractInvoiceFromText(
  */
 async function enhanceInvoiceInfo(
   pdfjsPage: any,
-  baseInfo: InvoiceCell
+  baseInfo: InvoiceCell,
 ): Promise<InvoiceCell> {
   try {
     const textContent = await pdfjsPage.getTextContent();
@@ -586,7 +586,7 @@ function extractAmountFromTextMap(textMap: any[]): string {
       // 查找该关键词附近的数字
       const nearbyItems = textMap.filter(
         (item) =>
-          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x
+          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x,
       );
 
       for (const item of nearbyItems) {
@@ -612,12 +612,12 @@ function extractDateFromTextMap(textMap: any[]): string {
     if (keywordItem) {
       const nearbyItems = textMap.filter(
         (item) =>
-          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x
+          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x,
       );
 
       for (const item of nearbyItems) {
         const dateMatch = item.text.match(
-          /(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})/
+          /(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})/,
         );
         if (dateMatch) {
           const year = dateMatch[1];
@@ -664,7 +664,7 @@ function extractInvoiceNumber(textMap: any[]): string {
     if (keywordItem) {
       const nearbyItems = textMap.filter(
         (item) =>
-          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x
+          Math.abs(item.y - keywordItem.y) < 20 && item.x > keywordItem.x,
       );
 
       for (const item of nearbyItems) {
@@ -688,7 +688,7 @@ export async function createMergedDocument(
     pagesPerSheet: number;
     targetPageSize: PageSize;
     scale: number;
-  }
+  },
 ): Promise<PDFDocument> {
   const { pagesPerSheet, targetPageSize } = options;
   const outputPdfDoc = await PDFDocument.create();
@@ -697,7 +697,7 @@ export async function createMergedDocument(
   const layoutResult = calculateOptimalLayout(
     allPages,
     targetPageSize,
-    pagesPerSheet
+    pagesPerSheet,
   );
 
   for (let i = 0; i < layoutResult.layouts.length; i++) {
@@ -756,7 +756,7 @@ export async function createMergedDocument(
 function calculateOptimalLayout(
   pages: PdfPageData[],
   targetPageSize: PageSize,
-  pagesPerSheet: number = 2
+  pagesPerSheet: number = 2,
 ): LayoutResult {
   const layouts: PageLayout[] = [];
   const halfHeight = targetPageSize.height / 2;
@@ -765,12 +765,12 @@ function calculateOptimalLayout(
   for (let i = 0; i < pages.length; i += pagesPerSheet) {
     const pagesToLayout = pages.slice(
       i,
-      Math.min(i + pagesPerSheet, pages.length)
+      Math.min(i + pagesPerSheet, pages.length),
     );
     const pageLayout = calculatePageLayout(
       pagesToLayout,
       targetPageSize,
-      halfHeight
+      halfHeight,
     );
     layouts.push(pageLayout);
   }
@@ -784,7 +784,7 @@ function calculateOptimalLayout(
 function calculatePageLayout(
   pages: PdfPageData[],
   targetPageSize: PageSize,
-  halfHeight: number
+  halfHeight: number,
 ): PageLayout {
   const positions: PagePosition[] = [];
 
@@ -818,7 +818,7 @@ function calculatePageLayout(
 function calculateSmartScale(
   srcWidth: number,
   srcHeight: number,
-  targetArea: { width: number; height: number }
+  targetArea: { width: number; height: number },
 ): ScaleResult {
   // 发票通常是竖向的，优化竖向布局
   const isLandscape = srcWidth > srcHeight;
@@ -882,7 +882,7 @@ function calculateScale(
   srcHeight: number,
   targetWidth: number,
   targetHeight: number,
-  defaultScale: number = DEFAULT_CONFIG.DEFAULT_SCALE
+  defaultScale: number = DEFAULT_CONFIG.DEFAULT_SCALE,
 ): number {
   const scaleX = (targetWidth * defaultScale) / srcWidth;
   const scaleY = (targetHeight * defaultScale) / srcHeight;
@@ -894,7 +894,7 @@ function calculateScale(
  */
 function parseQRCode(
   pageNumber: number,
-  qrCodeData: string | null
+  qrCodeData: string | null,
 ): InvoiceCell {
   if (!qrCodeData) {
     return { pageNumber, type: "", amount: "0", date: "", fileName: "" };
