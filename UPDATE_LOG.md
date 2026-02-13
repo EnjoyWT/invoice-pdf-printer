@@ -2,13 +2,24 @@
 
 # 更新记录 / Change Log
 
-> 最后更新: 2025-12-24
+> 最后更新: 2026-02-13
 
 本文件由 AI 自动维护。请不要手动更改历史记录内容。
 
 ---
 
 ## 历史更新记录（AI 插入从此处开始）
+
+## [v0.6.5] - 2026-02-13
+
+### 🚀 技术改进
+
+**更新者**: Codex
+
+- 生产域名 fp.yoloxy.com 配置 canonical、OG/Twitter 元信息并固定绝对 URL，提升搜索与分享抓取准确性
+- 注入 WebApplication/FAQ 结构化数据与 ai-summary，增强 LEO/LLM 摘要可见性
+- 新增 robots.txt 与 sitemap.xml，开放全站索引并指向资源清单
+- 公共路径补全 favicon 与 Apple Touch Icon，保证爬虫与 PWA 读取一致
 
 ## [v0.6.4] - 2026-02-03
 

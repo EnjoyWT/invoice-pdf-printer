@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Sitemap: https://fp.yoloxy.com/sitemap.xml
+
+# Clarity on single-page app assets
+Disallow: /*.map$
+Disallow: /@vite/*
