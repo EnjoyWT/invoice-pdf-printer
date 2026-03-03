@@ -14,7 +14,7 @@ export interface InvoiceCell {
 export interface PdfPageData {
   doc: import("pdf-lib").PDFDocument;
   page: import("pdf-lib").PDFPage;
-  pdfjsPage: import("pdfjs-dist").PDFPageProxy;
+  arrayBuffer: ArrayBuffer;
   width: number;
   height: number;
   sourceFile: string;

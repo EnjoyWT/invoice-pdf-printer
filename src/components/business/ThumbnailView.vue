@@ -52,16 +52,20 @@ const renderThumbnail = async (
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  const page = await pdf.getPage(1);
+  try {
+    const page = await pdf.getPage(1);
 
-  const viewport = page.getViewport({ scale: 0.2 });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
+    const viewport = page.getViewport({ scale: 0.2 });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
-  await page.render({
-    canvasContext: canvas.getContext("2d") as CanvasRenderingContext2D,
-    viewport,
-  }).promise;
+    await page.render({
+      canvasContext: canvas.getContext("2d") as CanvasRenderingContext2D,
+      viewport,
+    }).promise;
+  } finally {
+    await pdf.destroy();
+  }
 };
 
 watch(

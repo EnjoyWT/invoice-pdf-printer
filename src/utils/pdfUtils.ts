@@ -116,14 +116,11 @@ export async function processFiles(files: File[]): Promise<PdfPageData[]> {
       throwOnInvalidObject: false,
     });
     console.warn = originalWarn;
-    const pdfjsDocument = await pdfjs.getDocument({ data: arrayBuffer })
-      .promise;
 
     // 已知每个文件都是单页发票：只处理第 1 页，避免无意义循环
     const j = 0;
     try {
       const page = pdfDoc.getPage(j);
-      const pdfjsPage = await pdfjsDocument.getPage(j + 1);
       const cropBox = page.getCropBox();
       let width: number, height: number, processedPage: PDFPage;
 
@@ -157,7 +154,7 @@ export async function processFiles(files: File[]): Promise<PdfPageData[]> {
       allPages.push({
         doc: pdfDoc,
         page: processedPage,
-        pdfjsPage,
+        arrayBuffer,
         width,
         height,
         sourceFile: file.name,
@@ -205,10 +202,13 @@ export async function extractInvoiceData(
 async function extractSinglePageData(
   pageData: PdfPageData,
 ): Promise<InvoiceCell> {
-  const { pdfjsPage, pageNumber, sourceFile } = pageData;
+  const { arrayBuffer, pageNumber, sourceFile, originalPageIndex } = pageData;
+  let pdfjsDocument: any = null;
 
   try {
     const t0 = performance.now();
+    pdfjsDocument = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const pdfjsPage = await pdfjsDocument.getPage(originalPageIndex + 1);
 
     const { qrData, timings } = await scanInvoiceQRCode(pdfjsPage);
     let invoiceInfo = parseQRCode(pageNumber, qrData);
@@ -292,6 +292,14 @@ async function extractSinglePageData(
       amount: "0",
       date: "",
     };
+  } finally {
+    if (pdfjsDocument) {
+      try {
+        await pdfjsDocument.destroy();
+      } catch (e) {
+        console.error("销毁 pdfjsDocument 失败:", e);
+      }
+    }
   }
 }
 
