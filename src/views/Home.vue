@@ -4,10 +4,10 @@
     <PdfEnginePreloader />
 
     <!-- 顶部导航栏 -->
-    <header
-      ref="headerRef"
-      class="w-full px-4 md:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-none"
-    >
+	    <header
+	      ref="headerRef"
+	      class="w-full px-4 md:px-6 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex-none"
+	    >
       <div
         class="max-w-7xl mx-auto flex justify-between items-center h-auto md:h-12 relative"
       >
@@ -149,6 +149,12 @@
             </svg>
             <span class="text-sm font-medium">反馈</span>
           </a>
+          <span
+            class="hidden md:inline-flex text-[10px] text-gray-500 font-medium leading-none tabular-nums"
+            :title="`版本 v${appVersion}`"
+          >
+            v{{ appVersion }}
+          </span>
         </div>
       </div>
     </header>
@@ -321,6 +327,7 @@ const formattedTotalCount = computed(() => {
 });
 
 const headerRef: Ref<HTMLElement | null> = ref(null);
+const appVersion = __APP_VERSION__;
 
 onMounted(() => {
   // 页面初始化时查询发票处理数量

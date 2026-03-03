@@ -23,15 +23,21 @@
           ref="thumbnailsSidebarRef"
           class="thumbnails-sidebar"
           :class="{ show: showThumbnails }"
-          @mouseenter="onThumbnailsMouseEnter"
-          @scroll="onThumbnailsScroll"
-          @wheel="onThumbnailsScroll"
         >
-          <ThumbnailsPane class="thumbnails-pane">
+          <ThumbnailsPane
+            class="thumbnails-pane"
+            @mouseenter="onThumbnailsMouseEnter"
+            @mouseleave="onThumbnailsMouseLeave"
+            @scroll="onThumbnailsScroll"
+            @wheel.passive.stop="onThumbnailsWheel"
+            @mousedown="onThumbnailsPointerDown"
+            @touchstart="onThumbnailsPointerDown"
+          >
             <template #default="{ meta }">
               <div
                 class="thumbnail-item"
                 :class="{ active: meta.pageIndex === currentPage }"
+                :data-page-index="meta.pageIndex"
                 :style="{
                   position: 'absolute',
                   top: `${meta.top}px`,
@@ -48,7 +54,11 @@
         </div>
 
         <!-- PDF 视图区 -->
-        <Viewport class="pdf-viewport">
+        <Viewport
+          class="pdf-viewport"
+          @mouseenter="isHoveringMain = true"
+          @mouseleave="isHoveringMain = false"
+        >
           <Scroller>
             <template #default="{ page }">
               <div
@@ -82,7 +92,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref, defineComponent, h, onMounted } from "vue";
+import {
+  computed,
+  watch,
+  ref,
+  defineComponent,
+  h,
+  onMounted,
+  onUnmounted,
+} from "vue";
 import { usePdfiumEngine } from "@embedpdf/engines/vue";
 import { EmbedPDF, useCapability } from "@embedpdf/core/vue";
 import { createPluginRegistration } from "@embedpdf/core";
@@ -182,7 +200,12 @@ let thumbnailCap: ThumbnailCapability | null = null;
 // 是否正在同步
 const isSyncing = ref(false);
 
-// 用户是否在手动滚动缩略图（防止反弹）
+// 缩略图区域悬停状态
+const isHoveringThumbnails = ref(false);
+
+// 主视图区域悬停状态
+const isHoveringMain = ref(false);
+
 // 用户是否在手动滚动缩略图（防止反弹）
 const isUserScrollingThumbnails = ref(false);
 // 标记是否是程序导致的滚动（防止触发手动滚动检测）
@@ -206,50 +229,94 @@ const onTotalPages = (pages: number) => {
 };
 
 // 页面变化处理
-// 页面变化处理
 const onPageChange = (pageIndex: number) => {
-  if (!isSyncing.value) {
-    if (currentPage.value !== pageIndex) {
-      currentPage.value = pageIndex;
-    }
+  if (isSyncing.value) return;
 
-    // 只有在用户没有手动滚动缩略图时，才自动滚动缩略图
-    if (!isUserScrollingThumbnails.value && thumbnailCap) {
-      // 标记为程序滚动，防止触发 onThumbnailsScroll 的用户滚动检测
-      isProgrammaticScrolling.value = true;
-      if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+  const isPageChanged = currentPage.value !== pageIndex;
 
-      thumbnailCap.scrollToThumb(pageIndex);
+  if (isPageChanged) {
+    currentPage.value = pageIndex;
+  }
 
-      // 设置短暂延迟重置标记，等待滚动事件结束
-      programmaticScrollTimer = setTimeout(() => {
-        isProgrammaticScrolling.value = false;
-      }, 200);
-    }
+  // 只有当页面真正变化时，才尝试同步缩略图
+  // 防循环原则：
+  // 1. 页面确实变了
+  // 2. 鼠标不在侧边栏区域（避免用户正在浏览缩略图时被打断）
+  // 3. 用户最近没有手动滚动过侧边栏（isUserScrollingThumbnails 由缩略图滚动事件设置）
+  if (
+    isPageChanged &&
+    !isHoveringThumbnails.value &&
+    !isUserScrollingThumbnails.value &&
+    thumbnailCap
+  ) {
+    // 标记为程序滚动，防止 scrollToThumb 触发的 scroll 事件被当做用户手动操作
+    isProgrammaticScrolling.value = true;
+    if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+
+    thumbnailCap.scrollToThumb(pageIndex);
+
+    // 等待滚动完成
+    programmaticScrollTimer = setTimeout(() => {
+      isProgrammaticScrolling.value = false;
+    }, 600);
   }
 };
 
 // 用户开始滚动缩略图
 const onThumbnailsScroll = () => {
-  // 如果是程序导致的滚动，忽略
   if (isProgrammaticScrolling.value) return;
 
   isUserScrollingThumbnails.value = true;
-  // 清除之前的定时器
-  if (userScrollTimer) {
-    clearTimeout(userScrollTimer);
-  }
-  // 用户停止滚动 1 秒后，恢复自动滚动
+  if (userScrollTimer) clearTimeout(userScrollTimer);
+  // 用户手动操作后，锁定 3 秒，防止主视图反过来再同步缩略图
   userScrollTimer = setTimeout(() => {
     isUserScrollingThumbnails.value = false;
-  }, 1000);
+  }, 3000);
+};
+
+// 用户滚轮滚动缩略图：应当立即打断「主视图 -> 缩略图」的程序同步，避免出现滚不动/被拉回的体感
+const onThumbnailsWheel = (_event: WheelEvent) => {
+  isUserScrollingThumbnails.value = true;
+  if (userScrollTimer) clearTimeout(userScrollTimer);
+
+  if (isProgrammaticScrolling.value) {
+    isProgrammaticScrolling.value = false;
+    if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+    programmaticScrollTimer = null;
+  }
+
+  // 用户手动操作后，锁定 3 秒，防止主视图反过来再同步缩略图
+  userScrollTimer = setTimeout(() => {
+    isUserScrollingThumbnails.value = false;
+  }, 3000);
+};
+
+// 指针按下（鼠标或触摸），立刻锁定同步
+const onThumbnailsPointerDown = () => {
+  isUserScrollingThumbnails.value = true;
+  if (userScrollTimer) clearTimeout(userScrollTimer);
+
+  if (isProgrammaticScrolling.value) {
+    isProgrammaticScrolling.value = false;
+    if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+    programmaticScrollTimer = null;
+  }
+
+  userScrollTimer = setTimeout(() => {
+    isUserScrollingThumbnails.value = false;
+  }, 3000);
 };
 
 // 鼠标进入缩略图区域时，确保它可以滚动
 const onThumbnailsMouseEnter = () => {
+  isHoveringThumbnails.value = true;
   if (document.activeElement instanceof HTMLElement) {
     document.activeElement.blur();
   }
+};
+
+const onThumbnailsMouseLeave = () => {
+  isHoveringThumbnails.value = false;
 };
 
 // 点击缩略图
@@ -278,6 +345,11 @@ watch(
   },
 );
 
+onUnmounted(() => {
+  if (userScrollTimer) clearTimeout(userScrollTimer);
+  if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+});
+
 // 注册插件
 const plugins = computed(() => [
   createPluginRegistration(LoaderPluginPackage, {
@@ -300,6 +372,8 @@ const plugins = computed(() => [
     gap: 12, // 增加间距以容纳 padding
     labelHeight: 0,
     autoScroll: false,
+    // 避免滚动主视图时，缩略图侧栏使用 smooth 滚动导致与用户手动滚动互相“打架”
+    scrollBehavior: "auto",
   }),
   createPluginRegistration(PrintPluginPackage),
   createPluginRegistration(ExportPluginPackage, {
@@ -362,14 +436,15 @@ const plugins = computed(() => [
 
 .thumbnails-sidebar.show {
   width: 180px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .thumbnails-pane {
   width: 100%;
   height: 100%;
   position: relative;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .thumbnail-item {
