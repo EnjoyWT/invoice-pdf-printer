@@ -2,13 +2,28 @@
 
 # 更新记录 / Change Log
 
-> 最后更新: 2026-03-03
+> 最后更新: 2026-04-03
 
 本文件由 AI 自动维护。请不要手动更改历史记录内容。
 
 ---
 
 ## 历史更新记录（AI 插入从此处开始）
+
+## [v0.6.11] - 2026-04-03
+
+### 🔧 技术改进
+
+**更新者**: AI
+
+- GitHub Actions Web 部署流程改为仅构建并部署子仓 `invoice-server`（移除桌面端打包步骤）
+- Actions 增加 `pnpm/corepack` 初始化，避免 CI 环境缺失 `pnpm` 导致构建失败
+- 在 CI 中临时修复 `invoice-server/pnpm-lock.yaml` 的 tarball 镜像地址，避免构建阶段大量 `ERR_SOCKET_TIMEOUT`
+- 子模块拉取改为 HTTPS，并在 workflow 中使用 `SUBMODULE_TOKEN` 访问私有 `invoice-server`
+
+### 📝 文档更新
+
+- 更新日志记录本次拆仓与发布流程变更
 
 ## [v0.6.6] - 2026-03-03
 
