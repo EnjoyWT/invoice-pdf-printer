@@ -23,6 +23,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Enable pnpm (corepack)
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm --version
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
         working-directory: ./invoice-server
