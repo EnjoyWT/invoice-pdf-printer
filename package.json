@@ -2,7 +2,7 @@
   "name": "invoice-pdf-printer-shell",
   "private": true,
   "scripts": {
-    "installs": "bash -lc 'git submodule update --init --recursive && cd invoice-server && pnpm install'",
+    "install:server": "bash -lc 'git submodule update --init --recursive && cd invoice-server && pnpm install'",
     "dev": "bash -lc 'git submodule update --init --recursive && cd invoice-server && ( [ -d node_modules ] || pnpm install ) && pnpm dev'",
     "build": "bash -lc 'git submodule update --init --recursive && cd invoice-server && ( [ -d node_modules ] || pnpm install ) && pnpm build'",
     "preview": "bash -lc 'git submodule update --init --recursive && cd invoice-server && ( [ -d node_modules ] || pnpm install ) && pnpm preview'",
