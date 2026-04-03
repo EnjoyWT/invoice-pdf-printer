@@ -38,6 +38,13 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Fix pnpm lock tarball URLs
+        working-directory: ./invoice-server
+        run: |
+          # pnpm-lock.yaml 里部分依赖 tarball 被解析到内网镜像 `http://120.79.94.153:4873/`，
+          # 在 Vercel/Actions 环境下会出现大量 ERR_SOCKET_TIMEOUT。
+          # 这里在 CI 中临时重写为官方 npm registry，避免构建卡死。
+          sed -i 's#http://120.79.94.153:4873/#https://registry.npmjs.org/#g' pnpm-lock.yaml
       - name: Build Web (CI)
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: ./invoice-server
