@@ -1,0 +1,3 @@
+[submodule "invoice-server"]
+	path = invoice-server
+	url = git@github.com:EnjoyWT/invoice-server.git
