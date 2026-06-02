@@ -15,14 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Setup Node.js (for Vercel)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
       - name: Enable pnpm (corepack)
         run: |
           corepack enable
